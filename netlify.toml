@@ -1,0 +1,18 @@
+# netlify.toml
+# Serves index.html for auth routes, routes pages correctly.
+
+[[redirects]]
+  from = "/app"
+  to   = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/history"
+  to   = "/history.html"
+  status = 200
+
+# Fallback: unknown routes → index (sign-in)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

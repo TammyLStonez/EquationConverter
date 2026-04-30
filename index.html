@@ -3,1055 +3,266 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EqConvert — LaTeX → Unicode</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>EqConvert — Sign In</title>
+<link rel="stylesheet" href="/css/style.css">
 <style>
-  :root {
-    --bg:        #0b0e14;
-    --surface:   #111620;
-    --panel:     #161c28;
-    --border:    #1e2840;
-    --teal:      #00e5c3;
-    --teal-dim:  #00b89a;
-    --teal-glow: rgba(0,229,195,0.12);
-    --amber:     #f0a500;
-    --red:       #ff4d6d;
-    --text:      #cdd6f4;
-    --muted:     #6c7a9c;
-    --mono:      'DM Mono', monospace;
-    --sans:      'Syne', sans-serif;
+  .auth-wrap {
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column; gap: 1rem;
+    margin: auto;
+    animation: fadeUp 0.5s ease both;
   }
+  .auth-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    display: flex; flex-direction: column; gap: 1.25rem;
+  }
+  .auth-tabs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--panel); border-radius: var(--radius-sm);
+    padding: 3px; gap: 3px;
+  }
+  .auth-tab {
+    padding: 0.5rem; border-radius: 6px;
+    font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; border: none; background: none;
+    color: var(--muted); font-family: var(--sans);
+    transition: background var(--transition), color var(--transition);
+  }
+  .auth-tab.active { background: var(--surface); color: var(--teal); }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .google-btn {
+    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    width: 100%; padding: 0.72rem;
+    background: var(--panel); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); cursor: pointer;
+    font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
+    color: var(--text); transition: border-color var(--transition), background var(--transition);
+  }
+  .google-btn:hover { border-color: var(--border-hi); background: #1a2030; }
+  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    overflow-x: hidden;
+  .hero-text {
+    text-align: center; margin-bottom: 0.5rem;
   }
+  .hero-text h2 { font-size: 1.2rem; font-weight: 800; color: #fff; }
+  .hero-text p { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
 
-  /* ── Floating background symbols ── */
-  .bg-symbols {
-    position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
-  }
-  .bg-sym {
-    position: absolute;
-    font-family: var(--mono);
-    color: rgba(0,229,195,0.04);
-    font-size: clamp(1.5rem, 3vw, 3rem);
-    animation: drift linear infinite;
-    user-select: none;
-  }
-  @keyframes drift {
-    from { transform: translateY(110vh) rotate(0deg); opacity: 0; }
-    10%  { opacity: 1; }
-    90%  { opacity: 1; }
-    to   { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
-  }
-
-  /* ── Layout ── */
-  .app {
-    position: relative; z-index: 1;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2.5rem 1.5rem 4rem;
-    gap: 2rem;
-  }
-
-  /* ── Header ── */
-  header {
+  /* Convert animation in hero */
+  .eq-demo {
     text-align: center;
-    animation: fadeUp 0.6s ease both;
-  }
-  .logo-line {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.6rem 0;
     display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-    margin-bottom: 0.4rem;
   }
-  .logo-icon {
-    width: 2.2rem; height: 2.2rem;
-    border: 2px solid var(--teal);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem;
-    box-shadow: 0 0 14px var(--teal-glow);
-    flex-shrink: 0;
-  }
-  h1 {
-    font-size: clamp(1.6rem, 4vw, 2.4rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: #fff;
-  }
-  h1 span { color: var(--teal); }
-  .tagline {
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+  .eq-demo .from { color: var(--amber); }
+  .eq-demo .to   { color: var(--teal); }
+  .eq-demo .arr  { color: var(--muted); }
 
-  /* ── Drop zone ── */
-  .drop-zone {
-    width: 100%;
-    max-width: 680px;
-    border: 1.5px dashed var(--border);
-    border-radius: 16px;
-    padding: 3rem 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-    background: var(--surface);
-    animation: fadeUp 0.6s 0.1s ease both;
-    position: relative;
-    overflow: hidden;
+  .features {
+    width: 100%; max-width: 420px;
+    display: flex; flex-direction: column; gap: 0.5rem;
   }
-  .drop-zone::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,195,0.05) 0%, transparent 70%);
-    pointer-events: none;
+  .feature-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
   }
-  .drop-zone:hover, .drop-zone.dragover {
-    border-color: var(--teal);
-    background: var(--panel);
-    box-shadow: 0 0 40px rgba(0,229,195,0.08);
-  }
-  .drop-zone.dragover { border-style: solid; }
+  .feature-row::before { content: '✓'; color: var(--teal); flex-shrink: 0; }
 
-  .drop-icon {
-    width: 3.5rem; height: 3.5rem;
-    background: var(--panel);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.6rem;
-    transition: transform 0.2s, border-color 0.2s;
-  }
-  .drop-zone:hover .drop-icon, .drop-zone.dragover .drop-icon {
-    transform: scale(1.08);
-    border-color: var(--teal);
-  }
-  .drop-label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-  .drop-sub {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--muted);
-  }
-  .browse-btn {
-    margin-top: 0.25rem;
-    padding: 0.5rem 1.4rem;
-    background: transparent;
-    border: 1.5px solid var(--teal);
-    color: var(--teal);
-    border-radius: 8px;
-    font-family: var(--sans);
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    letter-spacing: 0.04em;
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  }
-  .browse-btn:hover {
-    background: var(--teal);
-    color: var(--bg);
-    box-shadow: 0 0 20px rgba(0,229,195,0.3);
-  }
-  #file-input { display: none; }
-
-  /* ── File info bar ── */
-  .file-bar {
-    width: 100%; max-width: 680px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 0.9rem 1.25rem;
-    display: flex; align-items: center; gap: 1rem;
-    animation: fadeUp 0.3s ease both;
-    display: none;
-  }
-  .file-bar.visible { display: flex; }
-  .file-bar-icon { font-size: 1.4rem; flex-shrink: 0; }
-  .file-bar-name {
-    flex: 1;
-    font-family: var(--mono);
-    font-size: 0.82rem;
-    color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .file-bar-size {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-  .clear-btn {
-    background: none; border: none; color: var(--muted);
-    font-size: 1rem; cursor: pointer; padding: 0.2rem;
-    transition: color 0.15s;
-    flex-shrink: 0;
-  }
-  .clear-btn:hover { color: var(--red); }
-
-  /* ── Convert button ── */
-  .convert-btn {
-    width: 100%; max-width: 680px;
-    padding: 0.95rem;
-    background: var(--teal);
-    color: var(--bg);
-    border: none;
-    border-radius: 12px;
-    font-family: var(--sans);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
-    display: none;
-    box-shadow: 0 4px 24px rgba(0,229,195,0.25);
-    animation: fadeUp 0.3s ease both;
-    position: relative;
-    overflow: hidden;
-  }
-  .convert-btn::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.4s;
-  }
-  .convert-btn:hover::after { transform: translateX(100%); }
-  .convert-btn.visible { display: block; }
-  .convert-btn:hover { box-shadow: 0 4px 32px rgba(0,229,195,0.4); transform: translateY(-1px); }
-  .convert-btn:active { transform: translateY(0); }
-  .convert-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-  /* ── Progress ── */
-  .progress-wrap {
-    width: 100%; max-width: 680px;
-    display: none;
-    flex-direction: column; gap: 0.6rem;
-    animation: fadeUp 0.3s ease both;
-  }
-  .progress-wrap.visible { display: flex; }
-  .progress-bar-bg {
-    height: 4px; background: var(--border); border-radius: 99px; overflow: hidden;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--teal-dim), var(--teal));
-    border-radius: 99px;
-    width: 0%;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 8px var(--teal);
-  }
-  .progress-label {
-    font-family: var(--mono);
-    font-size: 0.73rem;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  /* ── Results panel ── */
-  .results {
-    width: 100%; max-width: 680px;
-    display: none;
-    flex-direction: column; gap: 1rem;
-    animation: fadeUp 0.4s ease both;
-  }
-  .results.visible { display: flex; }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-    position: relative; overflow: hidden;
-  }
-  .stat-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: var(--teal);
-    transform: scaleX(0);
-    animation: scaleIn 0.4s 0.2s ease forwards;
-    transform-origin: left;
-  }
-  @keyframes scaleIn { to { transform: scaleX(1); } }
-  .stat-num {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--teal);
-    line-height: 1;
-    font-family: var(--mono);
-  }
-  .stat-lbl {
-    font-size: 0.68rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    margin-top: 0.3rem;
-  }
-
-  /* ── Equation preview log ── */
-  .eq-log {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .eq-log-header {
-    padding: 0.75rem 1.1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.72rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    display: flex; align-items: center; gap: 0.5rem;
-  }
-  .eq-log-header::before {
-    content: ''; width: 6px; height: 6px;
-    border-radius: 50%; background: var(--teal);
-    box-shadow: 0 0 6px var(--teal);
-    animation: pulse 2s ease infinite;
-  }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .eq-list {
-    max-height: 240px;
-    overflow-y: auto;
-    padding: 0.5rem 0;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-  .eq-item {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 1.1rem;
-    border-bottom: 1px solid rgba(30,40,64,0.5);
-    animation: fadeIn 0.25s ease both;
-  }
-  .eq-item:last-child { border-bottom: none; }
-  @keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
-  .eq-latex {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--amber);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .eq-arrow { color: var(--teal); font-size: 0.85rem; flex-shrink: 0; }
-  .eq-unicode {
-    font-family: var(--mono);
-    font-size: 0.82rem;
-    color: var(--teal);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    text-align: right;
-  }
-
-  /* ── Download button ── */
-  .download-btn {
-    width: 100%;
-    padding: 0.95rem;
-    background: transparent;
-    border: 1.5px solid var(--teal);
-    color: var(--teal);
-    border-radius: 12px;
-    font-family: var(--sans);
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: background 0.2s, box-shadow 0.2s;
-    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  }
-  .download-btn:hover {
-    background: rgba(0,229,195,0.08);
-    box-shadow: 0 0 24px rgba(0,229,195,0.15);
-  }
-
-  /* ── Error ── */
-  .error-box {
-    width: 100%; max-width: 680px;
-    background: rgba(255,77,109,0.08);
-    border: 1.5px solid rgba(255,77,109,0.3);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--red);
-    display: none;
-    animation: fadeUp 0.3s ease both;
-  }
-  .error-box.visible { display: block; }
-
-  /* ── Reset link ── */
-  .reset-row {
-    display: none;
-    justify-content: center;
-    animation: fadeUp 0.3s ease both;
-  }
-  .reset-row.visible { display: flex; }
-  .reset-link {
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--muted);
-    background: none; border: none; cursor: pointer;
-    text-decoration: underline; text-underline-offset: 3px;
-    transition: color 0.15s;
-  }
-  .reset-link:hover { color: var(--text); }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(14px); }
-    to   { opacity: 1; transform: none; }
-  }
-
-  /* ── Footer ── */
-  footer {
-    position: relative; z-index: 1;
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-    text-align: center;
-    opacity: 0.6;
-    margin-top: auto;
-  }
+  .page { justify-content: center; gap: 1.5rem; padding-top: 4rem; }
 </style>
 </head>
 <body>
 
-<!-- Floating math symbols background -->
 <div class="bg-symbols" id="bg-symbols"></div>
 
-<div class="app">
+<main class="page">
 
-  <header>
-    <div class="logo-line">
-      <div class="logo-icon">∑</div>
-      <h1>Eq<span>Convert</span></h1>
+  <div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:0.5rem">
+      <div class="nav-logo-icon" style="width:36px;height:36px;font-size:1.2rem;border:1.5px solid var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--teal);box-shadow:0 0 14px var(--teal-glow);font-family:var(--mono)">∑</div>
+      <h1 class="page-title">Eq<span>Convert</span></h1>
     </div>
-    <p class="tagline">LaTeX → Unicode · .docx document converter</p>
-  </header>
+    <p class="page-sub">LaTeX → Unicode · Document Converter</p>
 
-  <!-- Drop zone -->
-  <div class="drop-zone" id="drop-zone">
-    <div class="drop-icon">📄</div>
-    <div class="drop-label">Drop your .docx file here</div>
-    <div class="drop-sub">Equations like \(E=mc^2\) and $\alpha + \beta$ become E=mc² and α + β</div>
-    <button class="browse-btn" id="browse-btn">Browse file</button>
-    <input type="file" id="file-input" accept=".docx">
+    <div class="eq-demo" style="margin-top:1rem">
+      <span class="from">\(\alpha + \beta = \gamma\)</span>
+      <span class="arr">→</span>
+      <span class="to">α + β = γ</span>
+    </div>
   </div>
 
-  <!-- File bar -->
-  <div class="file-bar" id="file-bar">
-    <span class="file-bar-icon">📝</span>
-    <span class="file-bar-name" id="file-bar-name"></span>
-    <span class="file-bar-size" id="file-bar-size"></span>
-    <button class="clear-btn" id="clear-btn" title="Remove file">✕</button>
-  </div>
-
-  <!-- Convert button -->
-  <button class="convert-btn" id="convert-btn">⚗ Convert Equations</button>
-
-  <!-- Progress -->
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
-    <div class="progress-label" id="progress-label">Initialising…</div>
-  </div>
-
-  <!-- Error -->
-  <div class="error-box" id="error-box"></div>
-
-  <!-- Results -->
-  <div class="results" id="results">
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num" id="stat-paras">0</div>
-        <div class="stat-lbl">Paragraphs converted</div>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="hero-text">
+        <h2>Welcome back</h2>
+        <p>Sign in to access your converter and history</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-eqs">0</div>
-        <div class="stat-lbl">Equations found</div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-signin">Sign In</button>
+        <button class="auth-tab" id="tab-signup">Sign Up</button>
       </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-time">0ms</div>
-        <div class="stat-lbl">Processing time</div>
+
+      <!-- Alert -->
+      <div class="alert alert-error" id="auth-alert"></div>
+
+      <!-- Sign In form -->
+      <div id="form-signin" style="display:flex;flex-direction:column;gap:1rem">
+        <div class="form-group">
+          <label class="input-label">Email</label>
+          <input class="input" type="email" id="si-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="input-label">Password</label>
+          <input class="input" type="password" id="si-password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-signin">Sign In</button>
       </div>
+
+      <!-- Sign Up form -->
+      <div id="form-signup" style="display:none;flex-direction:column;gap:1rem">
+        <div class="form-group">
+          <label class="input-label">Name</label>
+          <input class="input" type="text" id="su-name" placeholder="Your name" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="input-label">Email</label>
+          <input class="input" type="email" id="su-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="input-label">Password</label>
+          <input class="input" type="password" id="su-password" placeholder="Min. 6 characters" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-signup">Create Account</button>
+      </div>
+
+      <div class="divider">or continue with</div>
+
+      <button class="google-btn" id="btn-google">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
     </div>
 
-    <div class="eq-log">
-      <div class="eq-log-header">Conversion log</div>
-      <div class="eq-list" id="eq-list"></div>
+    <div class="features">
+      <div class="feature-row">Converts all LaTeX math to clean Unicode</div>
+      <div class="feature-row">Works inside your .docx files — formatting preserved</div>
+      <div class="feature-row">History saved for 30 days, then auto-deleted</div>
     </div>
-
-    <button class="download-btn" id="download-btn">⬇ Download Converted Document</button>
   </div>
 
-  <!-- Reset -->
-  <div class="reset-row" id="reset-row">
-    <button class="reset-link" id="reset-btn">← Convert another file</button>
-  </div>
+</main>
 
-</div>
+<script type="module">
+  import { signIn, signUp, signInGoogle, authErrorMessage, redirectIfAuthed } from "/js/auth.js";
 
-<footer>All processing happens in your browser. No data is uploaded anywhere.</footer>
-
-<script>
-// ═══════════════════════════════════════════════════════════════
-//  FLOATING BACKGROUND SYMBOLS
-// ═══════════════════════════════════════════════════════════════
-(function() {
-  const symbols = ['∑','∫','∂','α','β','γ','δ','∇','∞','π','Δ','λ','μ','ω','Ω','φ','ψ','ξ','≤','≥','→','⇒','√','±','≈','⊕'];
+  // Floating symbols
+  const syms = ['∑','∫','∂','α','β','γ','δ','∇','∞','π','Δ','λ','→','⇒','√','±','≈'];
   const container = document.getElementById('bg-symbols');
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 18; i++) {
     const el = document.createElement('span');
     el.className = 'bg-sym';
-    el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-    const left = Math.random() * 100;
-    const dur  = 18 + Math.random() * 22;
-    const delay = -Math.random() * dur;
-    el.style.cssText = `left:${left}%;animation-duration:${dur}s;animation-delay:${delay}s;font-size:${1.2 + Math.random()*2}rem`;
+    el.textContent = syms[Math.floor(Math.random() * syms.length)];
+    const dur = 20 + Math.random() * 20;
+    el.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.5}rem`;
     container.appendChild(el);
   }
-})();
 
-// ═══════════════════════════════════════════════════════════════
-//  LATEX → UNICODE CONVERSION ENGINE
-// ═══════════════════════════════════════════════════════════════
-const GREEK = {
-  alpha:'α',beta:'β',gamma:'γ',delta:'δ',epsilon:'ε',varepsilon:'ε',
-  zeta:'ζ',eta:'η',theta:'θ',vartheta:'ϑ',iota:'ι',kappa:'κ',lambda:'λ',
-  mu:'μ',nu:'ν',xi:'ξ',pi:'π',varpi:'ϖ',rho:'ρ',varrho:'ϱ',sigma:'σ',
-  varsigma:'ς',tau:'τ',upsilon:'υ',phi:'φ',varphi:'φ',chi:'χ',psi:'ψ',omega:'ω',
-  Alpha:'Α',Beta:'Β',Gamma:'Γ',Delta:'Δ',Epsilon:'Ε',Zeta:'Ζ',Eta:'Η',
-  Theta:'Θ',Iota:'Ι',Kappa:'Κ',Lambda:'Λ',Mu:'Μ',Nu:'Ν',Xi:'Ξ',Pi:'Π',
-  Rho:'Ρ',Sigma:'Σ',Tau:'Τ',Upsilon:'Υ',Phi:'Φ',Chi:'Χ',Psi:'Ψ',Omega:'Ω'
-};
-const OPERATORS = {
-  times:'×',div:'÷',cdot:'·',pm:'±',mp:'∓',oplus:'⊕',otimes:'⊗',odot:'⊙',
-  circ:'∘',bullet:'•',star:'★',ast:'∗',dagger:'†',ddagger:'‡',cap:'∩',cup:'∪',
-  setminus:'∖',subset:'⊂',supset:'⊃',subseteq:'⊆',supseteq:'⊇',
-  in:'∈',notin:'∉',emptyset:'∅',varnothing:'∅',forall:'∀',exists:'∃',nexists:'∄',
-  neg:'¬',lnot:'¬',land:'∧',lor:'∨',wedge:'∧',vee:'∨',
-  sum:'∑',prod:'∏',coprod:'∐',int:'∫',iint:'∬',iiint:'∭',oint:'∮',
-  partial:'∂',nabla:'∇',infty:'∞',sqrt:'√',
-  ldots:'…',cdots:'⋯',vdots:'⋮',ddots:'⋱',perp:'⊥',parallel:'∥',
-  angle:'∠',triangle:'△',hbar:'ℏ',ell:'ℓ',wp:'℘',aleph:'ℵ',beth:'ℶ'
-};
-const RELATIONS = {
-  leq:'≤',le:'≤',geq:'≥',ge:'≥',neq:'≠',ne:'≠',approx:'≈',sim:'∼',
-  simeq:'≃',cong:'≅',equiv:'≡',propto:'∝',ll:'≪',gg:'≫',prec:'≺',succ:'≻',
-  models:'⊨',vdash:'⊢',dashv:'⊣',asymp:'≍',doteq:'≐',
-  preceq:'⪯',succeq:'⪰'
-};
-const ARROWS = {
-  to:'→',rightarrow:'→',Rightarrow:'⇒',leftarrow:'←',gets:'←',Leftarrow:'⇐',
-  leftrightarrow:'↔',Leftrightarrow:'⇔',uparrow:'↑',Uparrow:'⇑',
-  downarrow:'↓',Downarrow:'⇓',updownarrow:'↕',Updownarrow:'⇕',
-  nearrow:'↗',searrow:'↘',nwarrow:'↖',swarrow:'↙',mapsto:'↦',
-  longmapsto:'⟼',longrightarrow:'⟶',longleftarrow:'⟵',longleftrightarrow:'⟷',
-  rightharpoonup:'⇀',rightharpoondown:'⇁',leftharpoonup:'↼',leftharpoondown:'↽',
-  rightleftharpoons:'⇌',hookrightarrow:'↪',hookleftarrow:'↩'
-};
-const MISC = {
-  langle:'⟨',rangle:'⟩',lceil:'⌈',rceil:'⌉',lfloor:'⌊',rfloor:'⌋',
-  Vert:'‖',vert:'|',quad:' ',qquad:'  ',therefore:'∴',because:'∵',
-  checkmark:'✓',square:'□',blacksquare:'■',diamond:'◇',
-  flat:'♭',natural:'♮',sharp:'♯',degree:'°',prime:'′'
-};
-const ACCENTS = {
-  hat:'̂',tilde:'̃',bar:'̄',vec:'⃗',dot:'̇',ddot:'̈',
-  overline:'̄',underline:'̲',widehat:'̂',widetilde:'̃',
-  acute:'́',grave:'̀',check:'̌',breve:'̆'
-};
-const FUNCTIONS = new Set([
-  'sin','cos','tan','cot','sec','csc','arcsin','arccos','arctan',
-  'sinh','cosh','tanh','coth','log','ln','exp','lim','sup','inf',
-  'max','min','det','dim','ker','gcd','lcm','Pr','arg','Re','Im'
-]);
-const ALL_SYMBOLS = Object.assign({}, GREEK, OPERATORS, RELATIONS, ARROWS, MISC);
+  // Redirect if already signed in
+  redirectIfAuthed('/app.html');
 
-const SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹',
-  '+':'⁺','-':'⁻','=':'⁼','(':'⁽',')':'⁾',
-  'a':'ᵃ','b':'ᵇ','c':'ᶜ','d':'ᵈ','e':'ᵉ','f':'ᶠ','g':'ᵍ','h':'ʰ','i':'ⁱ','j':'ʲ',
-  'k':'ᵏ','l':'ˡ','m':'ᵐ','n':'ⁿ','o':'ᵒ','p':'ᵖ','r':'ʳ','s':'ˢ','t':'ᵗ',
-  'u':'ᵘ','v':'ᵛ','w':'ʷ','x':'ˣ','y':'ʸ','z':'ᶻ',
-  'A':'ᴬ','B':'ᴮ','D':'ᴰ','E':'ᴱ','G':'ᴳ','H':'ᴴ','I':'ᴵ','J':'ᴶ','K':'ᴷ',
-  'L':'ᴸ','M':'ᴹ','N':'ᴺ','O':'ᴼ','P':'ᴾ','R':'ᴿ','T':'ᵀ','U':'ᵁ','V':'ᵛ','W':'ᵂ'
-};
-const SUB_MAP = {'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉',
-  '+':'₊','-':'₋','=':'₌','(':'₍',')':'₎',
-  'a':'ₐ','e':'ₑ','h':'ₕ','i':'ᵢ','j':'ⱼ','k':'ₖ','l':'ₗ','m':'ₘ','n':'ₙ',
-  'o':'ₒ','p':'ₚ','r':'ᵣ','s':'ₛ','t':'ₜ','u':'ᵤ','v':'ᵥ','x':'ₓ'
-};
+  // Tab switching
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  const formSignin = document.getElementById('form-signin');
+  const formSignup = document.getElementById('form-signup');
+  const alert = document.getElementById('auth-alert');
 
-function applyScript(str, map) {
-  let result = '';
-  for (const ch of str) result += map[ch] !== undefined ? map[ch] : ch;
-  return result;
-}
-
-function consumeArg(s, pos) {
-  if (pos >= s.length) return ['', pos];
-  if (s[pos] === '{') {
-    let depth = 1, i = pos + 1;
-    while (i < s.length && depth > 0) {
-      if (s[i] === '{') depth++;
-      else if (s[i] === '}') depth--;
-      i++;
-    }
-    return [s.slice(pos + 1, i - 1), i];
+  function showAlert(msg) {
+    alert.textContent = msg;
+    alert.classList.add('visible');
   }
-  return [s[pos], pos + 1];
-}
+  function hideAlert() { alert.classList.remove('visible'); }
 
-function stripBraces(s) {
-  s = s.trim();
-  if (s.startsWith('{') && s.endsWith('}')) return s.slice(1, -1);
-  return s;
-}
-
-function convertInner(expr) {
-  expr = expr.trim();
-
-  // \frac{a}{b}
-  expr = expr.replace(/\\frac\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g,
-    (_, n, d) => {
-      const cn = convertInner(n), cd = convertInner(d);
-      if (cn.length <= 4 && cd.length <= 4) return `${cn}⁄${cd}`;
-      return `(${cn})/(${cd})`;
-    });
-
-  // \sqrt[n]{x} and \sqrt{x}
-  expr = expr.replace(/\\sqrt(?:\[([^\]]*)\])?\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g,
-    (_, n, content) => {
-      const inner = convertInner(content);
-      const sym = n ? ({'2':'√','3':'∛','4':'∜'}[n.trim()] || '√') : '√';
-      return content.length > 1 ? `${sym}(${inner})` : `${sym}${inner}`;
-    });
-
-  // text/math style wrappers
-  expr = expr.replace(/\\(?:mathbb|mathrm|mathbf|mathit|mathsf|mathtt|text|textrm|textbf|textit|operatorname)\{([^{}]*)\}/g,
-    (_, inner) => convertInner(inner));
-
-  // mathbb shortcuts
-  expr = expr.replace(/\\mathbb\{R\}/g,'ℝ').replace(/\\mathbb\{Z\}/g,'ℤ')
-             .replace(/\\mathbb\{N\}/g,'ℕ').replace(/\\mathbb\{Q\}/g,'ℚ')
-             .replace(/\\mathbb\{C\}/g,'ℂ');
-
-  // accents: \hat{x} etc
-  expr = expr.replace(/\\(hat|tilde|bar|vec|dot|ddot|overline|underline|widehat|widetilde|acute|grave|check|breve)\{([^{}]*)\}/g,
-    (_, cmd, content) => {
-      const acc = ACCENTS[cmd] || '';
-      const inner = convertInner(content);
-      return inner + acc;
-    });
-
-  // \underset \overset
-  expr = expr.replace(/\\underset\{([^{}]*)\}\{([^{}]*)\}/g,
-    (_, b, a) => `${convertInner(a)}_${convertInner(b)}`);
-  expr = expr.replace(/\\overset\{([^{}]*)\}\{([^{}]*)\}/g,
-    (_, a, b) => `${convertInner(a)}^${convertInner(b)}`);
-
-  // remove \limits \nolimits
-  expr = expr.replace(/\\(?:limits|nolimits)\b/g, '');
-
-  // delimiter pairs
-  const delimMap = {
-    '\\left(':'(','\\right)':')',
-    '\\left[':'[','\\right]':']',
-    '\\left\\{':'{','\\right\\}':'}',
-    '\\left|':'|','\\right|':'|',
-    '\\left\\|':'‖','\\right\\|':'‖',
-    '\\left\\langle':'⟨','\\right\\rangle':'⟩',
-    '\\left.':'','\\right.':'',
-    '\\left\\lfloor':'⌊','\\right\\rfloor':'⌋',
-    '\\left\\lceil':'⌈','\\right\\rceil':'⌉',
-    '\\bigl(':'(','\\bigr)':')',
-    '\\Bigl(':'(','\\Bigr)':')',
-    '\\biggl(':'(','\\biggr)':')',
-    '\\Biggl(':'(','\\Biggr)':')',
-    '\\bigl[':'[','\\bigr]':']'
-  };
-  for (const [k, v] of Object.entries(delimMap)) {
-    expr = expr.split(k).join(v);
-  }
-
-  // function names
-  for (const fn of FUNCTIONS) {
-    expr = expr.replace(new RegExp(`\\\\${fn}\\b`, 'g'), fn);
-  }
-
-  // super/subscript: handle x^{...} x_{...} in either order
-  expr = expr.replace(
-    /([\w\u03B1-\u03C9\u0391-\u03A9∑∏∫∮∂∇]|[)\]])?(?:(\^)(\{[^{}]*\}|[^{}\s\\]))?(?:(_)(\{[^{}]*\}|[^{}\s\\]))?/g,
-    (full, base, c1, s1, c2, s2) => {
-      if (!c1 && !c2) return full;
-      let result = base || '';
-      const supStr = c1 === '^' ? stripBraces(s1 || '') : (c2 === '^' ? stripBraces(s2 || '') : null);
-      const subStr = c1 === '_' ? stripBraces(s1 || '') : (c2 === '_' ? stripBraces(s2 || '') : null);
-      if (subStr !== null) {
-        const mapped = applyScript(subStr, SUB_MAP);
-        result += mapped !== subStr ? mapped : `_(${convertInner(subStr)})`;
-      }
-      if (supStr !== null) {
-        const mapped = applyScript(supStr, SUP_MAP);
-        result += mapped !== supStr ? mapped : `^(${convertInner(supStr)})`;
-      }
-      return result;
-    }
-  );
-
-  // all remaining \commands
-  expr = expr.replace(/\\([A-Za-z]+|[^A-Za-z\s])/g, (full, cmd) => ALL_SYMBOLS[cmd] || full);
-
-  // clean leftover braces
-  expr = expr.replace(/\{([^{}]*)\}/g, '$1');
-  expr = expr.replace(/\{([^{}]*)\}/g, '$1');
-
-  return expr;
-}
-
-function looksLikeMath(s) {
-  s = s.trim();
-  if (s.includes('\\') || s.includes('{') || s.includes('}')) return true;
-  if (s.includes('^') || s.includes('_')) return true;
-  if (/^[\d\s,.]+$/.test(s)) return false;
-  if (/^\d/.test(s)) {
-    if (!/[+\-*/=<>!~|&a-zA-Z]/.test(s)) return false;
-    if (/\d\s+[a-z]+\s+\d/.test(s)) return false;
-  }
-  return true;
-}
-
-function convertLatexInText(text) {
-  const conversionLog = [];
-
-  // display $$ ... $$
-  text = text.replace(/\$\$(.+?)\$\$/gs, (_, inner) => {
-    const trimmed = inner.trim();
-    const converted = convertInner(trimmed);
-    if (converted !== trimmed) conversionLog.push([trimmed, converted]);
-    return '\n' + converted + '\n';
+  tabSignin.addEventListener('click', () => {
+    tabSignin.classList.add('active'); tabSignup.classList.remove('active');
+    formSignin.style.display = 'flex'; formSignup.style.display = 'none';
+    hideAlert();
+  });
+  tabSignup.addEventListener('click', () => {
+    tabSignup.classList.add('active'); tabSignin.classList.remove('active');
+    formSignup.style.display = 'flex'; formSignin.style.display = 'none';
+    hideAlert();
   });
 
-  // display \[ ... \]
-  text = text.replace(/\\\[(.+?)\\\]/gs, (_, inner) => {
-    const trimmed = inner.trim();
-    const converted = convertInner(trimmed);
-    if (converted !== trimmed) conversionLog.push([trimmed, converted]);
-    return '\n' + converted + '\n';
-  });
-
-  // display \begin{equation|align|gather|multline}...\end{...}
-  text = text.replace(/\\begin\{(?:equation\*?|align\*?|gather\*?|multline\*?)\}(.+?)\\end\{[^}]+\}/gs,
-    (_, inner) => {
-      const trimmed = inner.trim();
-      const converted = convertInner(trimmed);
-      if (converted !== trimmed) conversionLog.push([trimmed, converted]);
-      return '\n' + converted + '\n';
-    });
-
-  // inline \( ... \)
-  text = text.replace(/\\\((.+?)\\\)/gs, (_, inner) => {
-    const trimmed = inner.trim();
-    const converted = convertInner(trimmed);
-    if (converted !== trimmed) conversionLog.push([trimmed, converted]);
-    return converted;
-  });
-
-  // inline $ ... $ (with math content guard)
-  text = text.replace(/\$(?=[^$\n]*[a-zA-Z\\^_{})(\[\]])([^$\n]+?)\$/g, (full, inner) => {
-    if (!looksLikeMath(inner)) return full;
-    const trimmed = inner.trim();
-    const converted = convertInner(trimmed);
-    if (converted !== trimmed) conversionLog.push([trimmed, converted]);
-    return converted;
-  });
-
-  return { text, log: conversionLog };
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  DOCX XML PROCESSING
-// ═══════════════════════════════════════════════════════════════
-function hasLatex(text) {
-  return /\$|\\\(|\\\)|\\\[|\\\]|\\begin\{(?:equation|align|gather|multline)/.test(text);
-}
-
-function unescapeXml(s) {
-  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
-           .replace(/&quot;/g,'"').replace(/&apos;/g,"'");
-}
-
-function escapeXml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-           .replace(/"/g,'&quot;');
-}
-
-function extractParaText(paraXml) {
-  const matches = [...paraXml.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)];
-  return matches.map(m => m[1]).join('');
-}
-
-function rebuildPara(paraXml, newText) {
-  const rprMatch = paraXml.match(/<w:rPr>([\s\S]*?)<\/w:rPr>/);
-  const rpr = rprMatch ? `<w:rPr>${rprMatch[1]}</w:rPr>` : '';
-  const xmlSpace = (newText.includes(' ') || newText.includes('\n'))
-    ? ' xml:space="preserve"' : '';
-  const newRun = `<w:r>${rpr}<w:t${xmlSpace}>${escapeXml(newText)}</w:t></w:r>`;
-  let stripped = paraXml.replace(/<w:r\b[\s\S]*?<\/w:r>/g, '');
-  return stripped.includes('</w:p>')
-    ? stripped.replace('</w:p>', newRun + '</w:p>')
-    : stripped + newRun;
-}
-
-function processXmlBody(xml, allLog) {
-  let parasChanged = 0, eqsFound = 0;
-  const result = xml.replace(/<w:p\b[\s\S]*?<\/w:p>/g, paraXml => {
-    const raw = extractParaText(paraXml);
-    if (!raw) return paraXml;
-    const decoded = unescapeXml(raw);
-    if (!hasLatex(decoded)) return paraXml;
-
-    const eqCount = (decoded.match(/\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$/g) || []).length;
-    const { text: converted, log } = convertLatexInText(decoded);
-    const trimmed = converted.trim();
-
-    if (trimmed === decoded) return paraXml;
-
-    allLog.push(...log);
-    parasChanged++;
-    eqsFound += eqCount;
-    return rebuildPara(paraXml, trimmed);
-  });
-  return { xml: result, parasChanged, eqsFound };
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UI STATE
-// ═══════════════════════════════════════════════════════════════
-let currentFile = null;
-let downloadBlob = null;
-let downloadName = '';
-
-const dropZone   = document.getElementById('drop-zone');
-const fileInput  = document.getElementById('file-input');
-const browseBtn  = document.getElementById('browse-btn');
-const fileBar    = document.getElementById('file-bar');
-const fileBarName= document.getElementById('file-bar-name');
-const fileBarSize= document.getElementById('file-bar-size');
-const clearBtn   = document.getElementById('clear-btn');
-const convertBtn = document.getElementById('convert-btn');
-const progressWrap= document.getElementById('progress-wrap');
-const progressFill= document.getElementById('progress-fill');
-const progressLbl = document.getElementById('progress-label');
-const errorBox   = document.getElementById('error-box');
-const results    = document.getElementById('results');
-const statParas  = document.getElementById('stat-paras');
-const statEqs    = document.getElementById('stat-eqs');
-const statTime   = document.getElementById('stat-time');
-const eqList     = document.getElementById('eq-list');
-const downloadBtn= document.getElementById('download-btn');
-const resetRow   = document.getElementById('reset-row');
-const resetBtn   = document.getElementById('reset-btn');
-
-function formatBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(1) + ' MB';
-}
-
-function setProgress(pct, label) {
-  progressFill.style.width = pct + '%';
-  progressLbl.textContent = label;
-}
-
-function showError(msg) {
-  errorBox.textContent = '⚠ ' + msg;
-  errorBox.classList.add('visible');
-}
-
-function hideError() { errorBox.classList.remove('visible'); }
-
-function setFile(file) {
-  if (!file || !file.name.endsWith('.docx')) {
-    showError('Please select a .docx file.');
-    return;
-  }
-  hideError();
-  currentFile = file;
-  fileBarName.textContent = file.name;
-  fileBarSize.textContent = formatBytes(file.size);
-  fileBar.classList.add('visible');
-  convertBtn.classList.add('visible');
-  results.classList.remove('visible');
-  resetRow.classList.remove('visible');
-  downloadBlob = null;
-}
-
-function resetAll() {
-  currentFile = null;
-  downloadBlob = null;
-  fileBar.classList.remove('visible');
-  convertBtn.classList.remove('visible');
-  progressWrap.classList.remove('visible');
-  results.classList.remove('visible');
-  resetRow.classList.remove('visible');
-  hideError();
-  eqList.innerHTML = '';
-  fileInput.value = '';
-}
-
-// Drag & drop
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) setFile(file);
-});
-dropZone.addEventListener('click', e => {
-  if (e.target === browseBtn || e.target === dropZone || e.target.closest('.drop-zone')) {
-    fileInput.click();
-  }
-});
-browseBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-clearBtn.addEventListener('click', resetAll);
-resetBtn.addEventListener('click', resetAll);
-
-// ═══════════════════════════════════════════════════════════════
-//  MAIN CONVERSION
-// ═══════════════════════════════════════════════════════════════
-convertBtn.addEventListener('click', async () => {
-  if (!currentFile) return;
-
-  convertBtn.disabled = true;
-  hideError();
-  results.classList.remove('visible');
-  resetRow.classList.remove('visible');
-  progressWrap.classList.add('visible');
-  eqList.innerHTML = '';
-
-  const t0 = performance.now();
-
-  try {
-    setProgress(10, 'Reading file…');
-    await tick();
-
-    const arrayBuf = await currentFile.arrayBuffer();
-
-    setProgress(25, 'Unpacking .docx…');
-    await tick();
-
-    const zip = await JSZip.loadAsync(arrayBuf);
-
-    setProgress(40, 'Parsing document XML…');
-    await tick();
-
-    const docXmlFile = zip.file('word/document.xml');
-    if (!docXmlFile) throw new Error('document.xml not found — is this a valid .docx file?');
-
-    const docXml = await docXmlFile.async('string');
-
-    setProgress(60, 'Converting equations…');
-    await tick();
-
-    const allLog = [];
-    const { xml: newXml, parasChanged, eqsFound } = processXmlBody(docXml, allLog);
-    zip.file('word/document.xml', newXml);
-
-    // Process headers/footers
-    for (const filename of Object.keys(zip.files)) {
-      if (/^word\/(header|footer)\d*\.xml$/.test(filename)) {
-        const hXml = await zip.file(filename).async('string');
-        const { xml: newHXml } = processXmlBody(hXml, allLog);
-        zip.file(filename, newHXml);
-      }
-    }
-
-    setProgress(80, 'Repacking document…');
-    await tick();
-
-    const outBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-
-    setProgress(100, 'Done!');
-    await tick(200);
-
-    const elapsed = Math.round(performance.now() - t0);
-    downloadBlob = outBlob;
-    downloadName = currentFile.name.replace(/\.docx$/i, '_unicode.docx');
-
-    // Render stats
-    statParas.textContent = parasChanged;
-    statEqs.textContent   = eqsFound;
-    statTime.textContent  = elapsed < 1000 ? elapsed + 'ms' : (elapsed/1000).toFixed(1) + 's';
-
-    // Render log (deduplicate)
-    eqList.innerHTML = '';
-    const seen = new Set();
-    const uniqueLog = allLog.filter(([k]) => { if (seen.has(k)) return false; seen.add(k); return true; });
-    const toShow = uniqueLog.slice(0, 40);
-    for (const [latex, unicode] of toShow) {
-      const item = document.createElement('div');
-      item.className = 'eq-item';
-      item.innerHTML = `
-        <span class="eq-latex">${escHtml(latex.length > 38 ? latex.slice(0,35)+'…' : latex)}</span>
-        <span class="eq-arrow">→</span>
-        <span class="eq-unicode">${escHtml(unicode.length > 28 ? unicode.slice(0,25)+'…' : unicode)}</span>
-      `;
-      eqList.appendChild(item);
-    }
-    if (uniqueLog.length === 0) {
-      eqList.innerHTML = '<div style="padding:1rem;text-align:center;font-family:var(--mono);font-size:0.75rem;color:var(--muted)">No LaTeX equations found in this document.</div>';
-    }
-
-    progressWrap.classList.remove('visible');
-    results.classList.add('visible');
-    resetRow.classList.add('visible');
-
-  } catch(err) {
-    progressWrap.classList.remove('visible');
-    showError(err.message || 'An unexpected error occurred.');
-    resetRow.classList.add('visible');
+  function setLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait…' : btn.dataset.label;
   }
 
-  convertBtn.disabled = false;
-});
+  // Sign in
+  const btnSignin = document.getElementById('btn-signin');
+  btnSignin.dataset.label = 'Sign In';
+  btnSignin.addEventListener('click', async () => {
+    hideAlert();
+    const email = document.getElementById('si-email').value.trim();
+    const pass  = document.getElementById('si-password').value;
+    if (!email || !pass) { showAlert('Please fill in all fields.'); return; }
+    setLoading(btnSignin, true);
+    try {
+      await signIn(email, pass);
+      window.location.href = '/app.html';
+    } catch(e) {
+      showAlert(authErrorMessage(e.code));
+    } finally { setLoading(btnSignin, false); }
+  });
 
-downloadBtn.addEventListener('click', () => {
-  if (!downloadBlob) return;
-  const url = URL.createObjectURL(downloadBlob);
-  const a = document.createElement('a');
-  a.href = url; a.download = downloadName;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-});
+  // Sign up
+  const btnSignup = document.getElementById('btn-signup');
+  btnSignup.dataset.label = 'Create Account';
+  btnSignup.addEventListener('click', async () => {
+    hideAlert();
+    const name  = document.getElementById('su-name').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const pass  = document.getElementById('su-password').value;
+    if (!email || !pass) { showAlert('Please fill in all fields.'); return; }
+    setLoading(btnSignup, true);
+    try {
+      await signUp(email, pass, name);
+      window.location.href = '/app.html';
+    } catch(e) {
+      showAlert(authErrorMessage(e.code));
+    } finally { setLoading(btnSignup, false); }
+  });
 
-function tick(ms = 16) { return new Promise(r => setTimeout(r, ms)); }
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+  // Google
+  document.getElementById('btn-google').addEventListener('click', async () => {
+    hideAlert();
+    try {
+      await signInGoogle();
+      window.location.href = '/app.html';
+    } catch(e) {
+      showAlert(authErrorMessage(e.code));
+    }
+  });
+
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (formSignin.style.display !== 'none') btnSignin.click();
+    else btnSignup.click();
+  });
 </script>
 </body>
 </html>
