@@ -1,6 +1,7 @@
 # EqConvert — Setup Guide
 
-A LaTeX → Unicode document converter web app built with vanilla HTML/CSS/JS and Firebase.
+LaTeX → Unicode document converter. Vanilla HTML/CSS/JS + Firebase Auth + Firestore.
+No Firebase Storage required — files are processed and downloaded entirely in the browser.
 
 ---
 
@@ -8,17 +9,17 @@ A LaTeX → Unicode document converter web app built with vanilla HTML/CSS/JS an
 
 ```
 eqconvert/
-├── index.html        ← Sign-in / sign-up page
-├── app.html          ← Main converter (protected)
-├── history.html      ← Conversion history (protected)
+├── index.html        ← Sign-in / sign-up (email + Google)
+├── app.html          ← Main converter (auth-protected)
+├── history.html      ← Conversion history (auth-protected)
 ├── css/style.css     ← Shared design system
 ├── js/
 │   ├── firebase.js   ← ⚠ Add your Firebase config here
-│   ├── auth.js       ← Email + Google auth
-│   ├── converter.js  ← LaTeX → Unicode engine
-│   ├── storage.js    ← Firestore + Storage operations
-│   └── nav.js        ← Shared navigation
-└── netlify.toml      ← Routing rules
+│   ├── auth.js       ← Email/password + Google sign-in
+│   ├── converter.js  ← LaTeX → Unicode engine + .docx processor
+│   ├── storage.js    ← Firestore metadata (no file storage)
+│   └── nav.js        ← Shared navigation bar
+└── netlify.toml      ← Routing rules for Netlify
 ```
 
 ---
@@ -26,14 +27,13 @@ eqconvert/
 ## Step 1 — Create a Firebase Project
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com)
-2. Click **Add project** → give it a name (e.g. `eqconvert`) → Continue
-3. Disable Google Analytics if you don't need it → **Create project**
+2. Click **Add project** → name it (e.g. `eqconvert`) → **Create project**
 
 ---
 
 ## Step 2 — Enable Authentication
 
-1. In the Firebase Console sidebar → **Authentication** → **Get started**
+1. Sidebar → **Authentication** → **Get started**
 2. Under **Sign-in method**, enable:
    - **Email/Password** → toggle on → Save
    - **Google** → toggle on → add your support email → Save
@@ -44,15 +44,17 @@ eqconvert/
 
 1. Sidebar → **Firestore Database** → **Create database**
 2. Choose **Start in production mode** → select a region → Done
-3. Go to **Rules** tab and replace the rules with:
+3. Go to the **Rules** tab and replace with:
 
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /conversions/{docId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+      allow read, delete: if request.auth != null
+                          && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.uid;
     }
   }
 }
@@ -60,44 +62,20 @@ service cloud.firestore {
 
 4. **Publish** the rules.
 
-5. To enable **automatic 30-day deletion**: go to **Indexes** → **TTL policies** → **Add TTL policy**:
-   - Collection: `conversions`
-   - Field: `expiresAt`
+5. **Enable 30-day auto-deletion (TTL policy):**
+   - Firestore → **Indexes** tab → **TTL policies** → **Add TTL policy**
+   - Collection group: `conversions`
+   - Field path: `expiresAt`
    - Click **Save**
 
 ---
 
-## Step 4 — Enable Firebase Storage
+## Step 4 — Add Firebase Config
 
-1. Sidebar → **Storage** → **Get started**
-2. Choose **Start in production mode** → select a region → Done
-3. Go to **Rules** tab and replace with:
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /users/{uid}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
-
-4. **Publish** the rules.
-
-5. To enable **automatic 30-day file deletion**:
-   - Storage console → **Lifecycle** (or go to Google Cloud Console → Cloud Storage → your bucket → Lifecycle)
-   - Add a rule: Delete objects older than **30 days**
-
----
-
-## Step 5 — Add Firebase Config to the App
-
-1. Firebase Console → Project Settings (gear icon) → **General**
-2. Scroll to **Your apps** → click the `</>` (web) icon → register the app
+1. Firebase Console → **Project Settings** (gear icon) → **General**
+2. Scroll to **Your apps** → click `</>` → register a web app
 3. Copy the `firebaseConfig` object
-4. Open `js/firebase.js` and replace the placeholder values:
+4. Open `js/firebase.js` and replace the placeholders:
 
 ```js
 const firebaseConfig = {
@@ -106,41 +84,61 @@ const firebaseConfig = {
   projectId:         "your-project",
   storageBucket:     "your-project.appspot.com",
   messagingSenderId: "123456789",
-  appId:             "1:123:web:abc123"
+  appId:             "1:123:web:abc"
 };
 ```
 
-5. Also add your Netlify domain to Firebase Auth's **Authorized domains**:
-   - Authentication → Settings → Authorized domains → **Add domain**
-   - Add: `your-app-name.netlify.app`
+5. Add your Netlify domain to **Authorized domains**:
+   - Authentication → **Settings** → **Authorized domains** → **Add domain**
+   - Add: `your-app.netlify.app`
 
 ---
 
-## Step 6 — Deploy to Netlify
+## Step 5 — Deploy to Netlify
 
 ```bash
-# In the eqconvert/ folder:
+# Inside the eqconvert/ folder
 git init
 git add .
 git commit -m "Initial commit"
-
 # Push to GitHub, then in Netlify:
 # New site → Import from GitHub → select repo
-# Build command: (leave blank)
-# Publish directory: (leave blank — root)
-# Deploy site
+# Build command:     (leave blank)
+# Publish directory: (leave blank)
+# → Deploy site
 ```
 
-That's it — your app is live!
+Future updates auto-deploy when you push to GitHub.
 
 ---
 
 ## How the 30-day Cleanup Works
 
-| Layer        | Mechanism                                      |
-|--------------|------------------------------------------------|
-| Firestore    | TTL policy on the `expiresAt` field            |
-| Storage      | Bucket lifecycle rule (delete after 30 days)   |
-| App-side     | `purgeExpired()` runs on every app load        |
+| Layer        | Mechanism                                         |
+|--------------|---------------------------------------------------|
+| Firestore    | TTL policy on the `expiresAt` field (set above)   |
+| App-side     | `purgeExpired()` runs on every app load           |
 
-All three layers work together so nothing is left behind.
+No Firebase Storage is used — converted files live only in the user's browser
+and are downloaded immediately after conversion.
+
+---
+
+## Converter — What It Handles
+
+| Category           | Examples                                              |
+|--------------------|-------------------------------------------------------|
+| Greek letters      | `\alpha` → α, `\Omega` → Ω                          |
+| Operators          | `\times` → ×, `\sum` → ∑, `\int` → ∫               |
+| Relations          | `\leq` → ≤, `\approx` → ≈, `\equiv` → ≡            |
+| Arrows             | `\rightarrow` → →, `\implies` → ⟹, `\iff` → ⟺    |
+| Fractions          | `\frac{1}{2}` → ½, `\frac{a}{b}` → a⁄b             |
+| Roots              | `\sqrt{x}` → √x, `\sqrt[3]{x}` → ∛x               |
+| Superscripts       | `x^{2}` → x², `E^{n}` → Eⁿ                         |
+| Subscripts         | `H_{2}O` → H₂O, `x_{i}` → xᵢ                      |
+| Temperature        | `^\circ C` → °C, `^\circ F` → °F                   |
+| Delimiters         | `\left(` → (, `\langle` → ⟨                         |
+| Accents            | `\hat{x}` → x̂, `\vec{v}` → v⃗                     |
+| Environments       | `\begin{equation}`, `align`, `gather`, `multline`   |
+| All 4 delimiters   | `$…$`, `$$…$$`, `\(…\)`, `\[…\]`                  |
+| Currency guard     | `$50` and `$1,200` are left untouched               |

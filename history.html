@@ -16,18 +16,37 @@
   }
   .ttl-note {
     width: 100%; max-width: 700px;
-    background: var(--amber-dim); border: 1px solid rgba(240,165,0,0.2);
-    border-radius: var(--radius-sm); padding: 0.7rem 1rem;
+    background: var(--amber-dim);
+    border: 1px solid rgba(240,165,0,0.2);
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1rem;
     font-family: var(--mono); font-size: 0.72rem; color: var(--amber);
     display: flex; align-items: center; gap: 0.5rem;
     animation: fadeUp 0.3s ease both;
   }
+
+  /* Stats chips on history items */
+  .history-chips {
+    display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;
+  }
+  .chip {
+    font-family: var(--mono); font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .chip.teal  { border-color: rgba(0,229,195,0.25); color: var(--teal); }
+  .chip.amber { border-color: rgba(240,165,0,0.25);  color: var(--amber); }
+
+  /* Skeleton shimmer */
   .skeleton {
     background: linear-gradient(90deg, var(--surface) 25%, var(--panel) 50%, var(--surface) 75%);
     background-size: 200% 100%;
-    animation: shimmer 1.5s ease infinite;
-    border-radius: var(--radius-sm);
-    height: 1rem;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 4px; height: 0.85rem;
   }
   @keyframes shimmer { to { background-position: -200% 0; } }
   .skeleton-item {
@@ -40,19 +59,19 @@
 <body>
 
 <div class="bg-symbols" id="bg-symbols"></div>
-
 <nav class="nav" id="nav"></nav>
 
 <main class="page">
 
   <div class="page-header">
     <h1 class="page-title">Conversion <span>History</span></h1>
-    <p class="page-sub">Your converted files · Auto-deleted after 30 days</p>
+    <p class="page-sub">Your converted files · Records auto-deleted after 30 days</p>
   </div>
 
   <div class="ttl-note">
     <span>⏱</span>
-    Files are automatically deleted 30 days after conversion. Download anything you want to keep.
+    History records are automatically removed 30 days after conversion.
+    Download your file right after converting to keep it permanently.
   </div>
 
   <div class="history-meta-row">
@@ -62,51 +81,77 @@
 
   <div class="alert alert-error max-700" id="error-box"></div>
 
-  <!-- Loading skeletons -->
+  <!-- Skeletons while loading -->
   <div class="history-list" id="skeleton-list">
-    <div class="skeleton-item"><span style="font-size:1.5rem">📝</span><div style="flex:1;display:flex;flex-direction:column;gap:0.5rem"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="width:35%"></div></div></div>
-    <div class="skeleton-item"><span style="font-size:1.5rem">📝</span><div style="flex:1;display:flex;flex-direction:column;gap:0.5rem"><div class="skeleton" style="width:75%"></div><div class="skeleton" style="width:40%"></div></div></div>
-    <div class="skeleton-item"><span style="font-size:1.5rem">📝</span><div style="flex:1;display:flex;flex-direction:column;gap:0.5rem"><div class="skeleton" style="width:55%"></div><div class="skeleton" style="width:30%"></div></div></div>
+    <div class="skeleton-item">
+      <span style="font-size:1.5rem">📝</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem">
+        <div class="skeleton" style="width:58%"></div>
+        <div class="skeleton" style="width:32%"></div>
+      </div>
+    </div>
+    <div class="skeleton-item">
+      <span style="font-size:1.5rem">📝</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem">
+        <div class="skeleton" style="width:72%"></div>
+        <div class="skeleton" style="width:40%"></div>
+      </div>
+    </div>
+    <div class="skeleton-item">
+      <span style="font-size:1.5rem">📝</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem">
+        <div class="skeleton" style="width:50%"></div>
+        <div class="skeleton" style="width:28%"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- Actual list -->
+  <!-- Actual history -->
   <div class="history-list hidden" id="history-list"></div>
 
   <!-- Empty state -->
   <div class="empty-state hidden" id="empty-state">
     <div class="empty-icon">📭</div>
     <div class="empty-title">No conversions yet</div>
-    <div class="empty-sub">Convert a .docx file and it will appear here</div>
-    <a href="/app.html" class="btn btn-outline" style="margin-top:1.25rem;display:inline-flex">Go to converter</a>
+    <div class="empty-sub">Convert a .docx and it will appear here</div>
+    <a href="/app.html" class="btn btn-outline" style="margin-top:1.25rem;display:inline-flex">
+      Go to converter
+    </a>
   </div>
 
 </main>
 
 <script type="module">
-  import { requireAuth }      from "/js/auth.js";
-  import { initNav }          from "/js/nav.js";
-  import { fetchHistory, deleteConversion, daysUntilExpiry, formatDate, purgeExpired } from "/js/storage.js";
+  import { requireAuth }  from "/js/auth.js";
+  import { initNav }      from "/js/nav.js";
+  import {
+    fetchHistory, deleteConversion,
+    daysUntilExpiry, formatDate, purgeExpired,
+  } from "/js/storage.js";
 
   // Floating symbols
-  const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','λ','→','√','±','≈'];
-  const container = document.getElementById('bg-symbols');
-  for (let i = 0; i < 14; i++) {
-    const el = document.createElement('span');
-    el.className = 'bg-sym';
-    el.textContent = syms[Math.floor(Math.random() * syms.length)];
-    const dur = 22 + Math.random() * 20;
-    el.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.5}rem`;
-    container.appendChild(el);
-  }
+  (() => {
+    const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','→','√','±','⟹'];
+    const el   = document.getElementById('bg-symbols');
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement('span');
+      s.className = 'bg-sym';
+      s.textContent = syms[i % syms.length];
+      const dur = 22 + Math.random() * 20;
+      s.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.2}rem`;
+      el.appendChild(s);
+    }
+  })();
 
-  const historyList  = document.getElementById('history-list');
-  const skeletonList = document.getElementById('skeleton-list');
-  const emptyState   = document.getElementById('empty-state');
-  const errorBox     = document.getElementById('error-box');
-  const historyCount = document.getElementById('history-count');
+  const $ = id => document.getElementById(id);
+  const historyList  = $('history-list');
+  const skeletonList = $('skeleton-list');
+  const emptyState   = $('empty-state');
+  const errorBox     = $('error-box');
+  const historyCount = $('history-count');
 
-  function showError(msg) { errorBox.textContent = '⚠ ' + msg; errorBox.classList.add('visible'); }
-  function escHtml(s)     { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const escHtml  = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const showError= m => { errorBox.textContent = '⚠ '+m; errorBox.classList.add('visible'); };
 
   let uid = null;
 
@@ -123,46 +168,47 @@
     errorBox.classList.remove('visible');
 
     try {
-      // Purge expired first
-      try { await purgeExpired(uid); } catch(_) {}
+      // Silently purge expired records first
+      try { await purgeExpired(uid); } catch (_) {}
 
       const items = await fetchHistory(uid);
-
       skeletonList.classList.add('hidden');
 
       if (items.length === 0) {
         emptyState.classList.remove('hidden');
-        historyCount.textContent = '0 files';
+        historyCount.textContent = '0 records';
         return;
       }
 
-      historyCount.textContent = `${items.length} file${items.length === 1 ? '' : 's'}`;
+      historyCount.textContent = `${items.length} record${items.length === 1 ? '' : 's'}`;
       historyList.innerHTML = '';
       historyList.classList.remove('hidden');
 
       items.forEach((item, idx) => {
-        const days   = daysUntilExpiry(item.expiresAt);
-        const date   = formatDate(item.createdAt);
-        const soon   = days <= 5;
+        const days = daysUntilExpiry(item.expiresAt);
+        const date = formatDate(item.createdAt);
+        const soon = days <= 5;
 
         const el = document.createElement('div');
         el.className = 'history-item';
-        el.style.animationDelay = `${idx * 0.06}s`;
+        el.style.animationDelay = `${idx * 0.055}s`;
+
         el.innerHTML = `
           <span class="history-icon">📝</span>
-          <div class="history-meta">
+          <div class="history-meta" style="min-width:0;flex:1">
             <div class="history-name">${escHtml(item.outputName || item.originalName)}</div>
-            <div class="history-date">${date}</div>
-            <div class="history-expires ${soon ? 'soon' : ''}">
-              ${days === 0 ? 'Expires today' : `Expires in ${days} day${days === 1 ? '' : 's'}`}
+            <div class="history-date">${escHtml(date)}</div>
+            <div class="history-chips">
+              <span class="chip teal">${item.eqsFound ?? 0} equation${(item.eqsFound ?? 0) === 1 ? '' : 's'}</span>
+              <span class="chip">${item.parasChanged ?? 0} para${(item.parasChanged ?? 0) === 1 ? '' : 's'} changed</span>
+              <span class="chip ${soon ? 'amber' : ''}">
+                ${days === 0 ? 'Expires today' : `Expires in ${days} day${days === 1 ? '' : 's'}`}
+              </span>
             </div>
           </div>
           <div class="history-actions">
-            <a href="${escHtml(item.downloadURL)}" target="_blank" rel="noopener"
-               class="btn btn-outline btn-sm" download="${escHtml(item.outputName || 'converted.docx')}">
-              ⬇ Download
-            </a>
-            <button class="btn btn-danger btn-sm" data-id="${escHtml(item.id)}" data-path="${escHtml(item.storagePath || '')}">
+            <button class="btn btn-danger btn-sm"
+                    data-id="${escHtml(item.id)}">
               Delete
             </button>
           </div>
@@ -173,33 +219,39 @@
       // Wire delete buttons
       historyList.querySelectorAll('.btn-danger').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('Delete this file? This cannot be undone.')) return;
-          btn.disabled = true;
+          if (!confirm('Delete this record? This cannot be undone.')) return;
+          btn.disabled    = true;
           btn.textContent = 'Deleting…';
           try {
-            await deleteConversion(btn.dataset.id, btn.dataset.path);
-            btn.closest('.history-item').remove();
-            const remaining = historyList.querySelectorAll('.history-item').length;
-            historyCount.textContent = `${remaining} file${remaining === 1 ? '' : 's'}`;
-            if (remaining === 0) {
-              historyList.classList.add('hidden');
-              emptyState.classList.remove('hidden');
-            }
-          } catch(e) {
-            btn.disabled = false;
+            await deleteConversion(btn.dataset.id);
+            const row = btn.closest('.history-item');
+            row.style.transition = 'opacity 0.25s, transform 0.25s';
+            row.style.opacity    = '0';
+            row.style.transform  = 'translateX(12px)';
+            setTimeout(() => {
+              row.remove();
+              const remaining = historyList.querySelectorAll('.history-item').length;
+              historyCount.textContent = `${remaining} record${remaining === 1 ? '' : 's'}`;
+              if (remaining === 0) {
+                historyList.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+              }
+            }, 280);
+          } catch (_) {
+            btn.disabled    = false;
             btn.textContent = 'Delete';
-            showError('Could not delete this file. Try again.');
+            showError('Could not delete. Check your connection and try again.');
           }
         });
       });
 
-    } catch(e) {
+    } catch (e) {
       skeletonList.classList.add('hidden');
       showError('Could not load history. Check your connection or Firebase config.');
     }
   }
 
-  document.getElementById('refresh-btn').addEventListener('click', loadHistory);
+  $('refresh-btn').addEventListener('click', loadHistory);
 </script>
 </body>
 </html>

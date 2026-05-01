@@ -12,55 +12,57 @@
     display: flex; gap: 0.75rem;
     animation: fadeUp 0.4s ease both;
   }
-  .eq-log-wrap { padding: 0; }
   .eq-log-list { padding: 0.4rem 0; }
-  .upload-status {
+
+  .save-status {
     width: 100%; max-width: 700px;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 1rem 1.25rem;
-    display: none; align-items: center; gap: 0.75rem;
-    font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+    background: var(--surface);
+    border: 1.5px solid rgba(0,229,195,0.2);
+    border-radius: var(--radius);
+    padding: 0.8rem 1.1rem;
+    font-family: var(--mono); font-size: 0.75rem; color: var(--teal);
+    display: none; align-items: center; gap: 0.6rem;
     animation: fadeUp 0.3s ease both;
   }
-  .upload-status.visible { display: flex; }
-  .upload-status.done { color: var(--teal); border-color: rgba(0,229,195,0.2); }
-  .upload-status.error { color: var(--red); border-color: rgba(255,77,109,0.2); }
+  .save-status.visible  { display: flex; }
+  .save-status.error    { color: var(--red); border-color: rgba(255,77,109,0.2); }
 </style>
 </head>
 <body>
 
 <div class="bg-symbols" id="bg-symbols"></div>
-
 <nav class="nav" id="nav"></nav>
 
 <main class="page">
 
   <div class="page-header">
     <h1 class="page-title">Convert <span>Equations</span></h1>
-    <p class="page-sub">Drop a .docx · LaTeX is replaced with Unicode · Formatting preserved</p>
+    <p class="page-sub">Drop a .docx · LaTeX → Unicode · Formatting preserved</p>
   </div>
 
   <!-- Drop zone -->
   <div class="drop-zone" id="drop-zone">
     <div class="drop-icon">📄</div>
     <div class="drop-label">Drop your .docx file here</div>
-    <div class="drop-sub">Supports $…$, $$…$$, \(…\), \[…\], \begin{equation}…</div>
+    <div class="drop-sub">
+      Handles $…$&nbsp;&nbsp;$$…$$&nbsp;&nbsp;\(…\)&nbsp;&nbsp;\[…\]&nbsp;&nbsp;\begin{equation}…
+    </div>
     <button class="btn btn-outline" id="browse-btn" style="margin-top:0.25rem">Browse file</button>
     <input type="file" id="file-input" accept=".docx" style="display:none">
   </div>
 
-  <!-- File bar -->
+  <!-- Selected file bar -->
   <div class="file-bar" id="file-bar">
-    <span style="font-size:1.3rem">📝</span>
+    <span style="font-size:1.3rem;flex-shrink:0">📝</span>
     <span class="file-bar-name" id="file-bar-name"></span>
     <span class="file-bar-size" id="file-bar-size"></span>
-    <button class="clear-btn" id="clear-btn">✕</button>
+    <button class="clear-btn" id="clear-btn" title="Remove">✕</button>
   </div>
 
   <!-- Error -->
   <div class="alert alert-error max-700" id="error-box"></div>
 
-  <!-- Convert actions -->
+  <!-- Convert button -->
   <div class="convert-actions" id="convert-actions" style="display:none">
     <button class="btn btn-primary" style="flex:1" id="convert-btn">⚗ Convert Equations</button>
   </div>
@@ -69,12 +71,6 @@
   <div class="progress-wrap" id="progress-wrap">
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="progress-label" id="progress-label">Initialising…</div>
-  </div>
-
-  <!-- Upload status -->
-  <div class="upload-status" id="upload-status">
-    <div class="spinner" id="upload-spinner"></div>
-    <span id="upload-label">Saving to your history…</span>
   </div>
 
   <!-- Stats -->
@@ -99,7 +95,12 @@
     <div class="eq-log-list scrollable" id="eq-list"></div>
   </div>
 
-  <!-- Download -->
+  <!-- Save status -->
+  <div class="save-status" id="save-status">
+    <span id="save-label"></span>
+  </div>
+
+  <!-- Download + reset -->
   <div class="convert-actions" id="download-row" style="display:none">
     <button class="btn btn-outline" style="flex:1" id="download-btn">⬇ Download Converted File</button>
     <button class="btn btn-ghost" id="reset-btn">Convert another</button>
@@ -108,153 +109,155 @@
 </main>
 
 <script type="module">
-  import { requireAuth }    from "/js/auth.js";
-  import { initNav }        from "/js/nav.js";
+  import { requireAuth }                    from "/js/auth.js";
+  import { initNav }                        from "/js/nav.js";
   import { convertLatexInText, processXmlBody } from "/js/converter.js";
-  import { saveConversion, purgeExpired } from "/js/storage.js";
+  import { saveConversion, purgeExpired }   from "/js/storage.js";
 
   // ── Floating symbols ──────────────────────────────────────────
-  const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','λ','→','√','±','≈','⇌'];
-  const container = document.getElementById('bg-symbols');
-  for (let i = 0; i < 16; i++) {
-    const el = document.createElement('span');
-    el.className = 'bg-sym';
-    el.textContent = syms[Math.floor(Math.random() * syms.length)];
-    const dur = 22 + Math.random() * 20;
-    el.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.5}rem`;
-    container.appendChild(el);
-  }
-
-  // ── Auth guard ────────────────────────────────────────────────
-  let currentUser = null;
-  requireAuth(async user => {
-    currentUser = user;
-    initNav('app');
-    // Silently purge expired records
-    try { await purgeExpired(user.uid); } catch(_) {}
-  });
+  (() => {
+    const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','λ','→','√','±','⇌','⟹'];
+    const el   = document.getElementById('bg-symbols');
+    for (let i = 0; i < 16; i++) {
+      const s   = document.createElement('span');
+      s.className = 'bg-sym';
+      s.textContent = syms[i % syms.length];
+      const dur = 22 + Math.random() * 20;
+      s.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.2}rem`;
+      el.appendChild(s);
+    }
+  })();
 
   // ── DOM refs ──────────────────────────────────────────────────
-  const dropZone      = document.getElementById('drop-zone');
-  const fileInput     = document.getElementById('file-input');
-  const browseBtn     = document.getElementById('browse-btn');
-  const fileBar       = document.getElementById('file-bar');
-  const fileBarName   = document.getElementById('file-bar-name');
-  const fileBarSize   = document.getElementById('file-bar-size');
-  const clearBtn      = document.getElementById('clear-btn');
-  const errorBox      = document.getElementById('error-box');
-  const convertActions= document.getElementById('convert-actions');
-  const convertBtn    = document.getElementById('convert-btn');
-  const progressWrap  = document.getElementById('progress-wrap');
-  const progressFill  = document.getElementById('progress-fill');
-  const progressLabel = document.getElementById('progress-label');
-  const uploadStatus  = document.getElementById('upload-status');
-  const uploadSpinner = document.getElementById('upload-spinner');
-  const uploadLabel   = document.getElementById('upload-label');
-  const statsGrid     = document.getElementById('stats-grid');
-  const eqLogCard     = document.getElementById('eq-log-card');
-  const eqList        = document.getElementById('eq-list');
-  const downloadRow   = document.getElementById('download-row');
-  const downloadBtn   = document.getElementById('download-btn');
-  const resetBtn      = document.getElementById('reset-btn');
+  const $ = id => document.getElementById(id);
+  const dropZone      = $('drop-zone');
+  const fileInput     = $('file-input');
+  const browseBtn     = $('browse-btn');
+  const fileBar       = $('file-bar');
+  const fileBarName   = $('file-bar-name');
+  const fileBarSize   = $('file-bar-size');
+  const clearBtn      = $('clear-btn');
+  const errorBox      = $('error-box');
+  const convertActions= $('convert-actions');
+  const convertBtn    = $('convert-btn');
+  const progressWrap  = $('progress-wrap');
+  const progressFill  = $('progress-fill');
+  const progressLabel = $('progress-label');
+  const statsGrid     = $('stats-grid');
+  const eqLogCard     = $('eq-log-card');
+  const eqList        = $('eq-list');
+  const saveStatus    = $('save-status');
+  const saveLabel     = $('save-label');
+  const downloadRow   = $('download-row');
+  const downloadBtn   = $('download-btn');
+  const resetBtn      = $('reset-btn');
 
+  let currentUser  = null;
   let currentFile  = null;
   let downloadBlob = null;
   let downloadName = '';
 
-  // ── Helpers ───────────────────────────────────────────────────
-  const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
-  const tick = ms => new Promise(r => setTimeout(r, ms || 16));
-  const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ── Auth guard ────────────────────────────────────────────────
+  requireAuth(async user => {
+    currentUser = user;
+    initNav('app');
+    try { await purgeExpired(user.uid); } catch (_) {}
+  });
 
-  function setProgress(pct, label) {
-    progressFill.style.width = pct + '%';
-    progressLabel.textContent = label;
-  }
-  function showError(msg) { errorBox.textContent = '⚠ ' + msg; errorBox.classList.add('visible'); }
-  function hideError()    { errorBox.classList.remove('visible'); }
+  // ── Helpers ───────────────────────────────────────────────────
+  const fmtBytes = n =>
+    n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
+  const tick     = ms  => new Promise(r => setTimeout(r, ms || 16));
+  const escHtml  = s   => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const setProgress = (pct, lbl) => { progressFill.style.width = pct+'%'; progressLabel.textContent = lbl; };
+  const showError   = msg => { errorBox.textContent = '⚠ '+msg; errorBox.classList.add('visible'); };
+  const hideError   = ()  => errorBox.classList.remove('visible');
 
   // ── File selection ────────────────────────────────────────────
   function setFile(file) {
-    if (!file?.name.endsWith('.docx')) { showError('Please select a .docx file.'); return; }
+    if (!file?.name.toLowerCase().endsWith('.docx')) {
+      showError('Please select a .docx file.'); return;
+    }
     hideError();
-    currentFile = file;
-    fileBarName.textContent = file.name;
-    fileBarSize.textContent = fmt(file.size);
-    fileBar.classList.add('visible');
-    convertActions.style.display = 'flex';
-    statsGrid.style.display = 'none';
-    eqLogCard.style.display = 'none';
-    downloadRow.style.display = 'none';
+    currentFile  = file;
     downloadBlob = null;
+    fileBarName.textContent = file.name;
+    fileBarSize.textContent = fmtBytes(file.size);
+    fileBar.classList.add('visible');
+    convertActions.style.display   = 'flex';
+    statsGrid.style.display         = 'none';
+    eqLogCard.style.display         = 'none';
+    downloadRow.style.display       = 'none';
+    saveStatus.className            = 'save-status';
   }
 
   function resetAll() {
     currentFile = downloadBlob = null;
     fileBar.classList.remove('visible');
-    convertActions.style.display = 'none';
+    convertActions.style.display  = 'none';
     progressWrap.classList.remove('visible');
-    uploadStatus.className = 'upload-status';
-    statsGrid.style.display = 'none';
-    eqLogCard.style.display = 'none';
-    downloadRow.style.display = 'none';
-    eqList.innerHTML = '';
-    fileInput.value = '';
+    statsGrid.style.display        = 'none';
+    eqLogCard.style.display        = 'none';
+    downloadRow.style.display      = 'none';
+    saveStatus.className           = 'save-status';
+    eqList.innerHTML               = '';
+    fileInput.value                = '';
     hideError();
   }
 
   // ── Drag & drop ───────────────────────────────────────────────
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
-  browseBtn.addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
-  fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-  clearBtn.addEventListener('click', resetAll);
-  resetBtn.addEventListener('click', resetAll);
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop',      e  => { e.preventDefault(); dropZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
+  browseBtn.addEventListener('click',    e  => { e.stopPropagation(); fileInput.click(); });
+  fileInput.addEventListener('change',   ()  => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+  clearBtn.addEventListener('click',  resetAll);
+  resetBtn.addEventListener('click',  resetAll);
 
   // ── Main conversion ───────────────────────────────────────────
   convertBtn.addEventListener('click', async () => {
     if (!currentFile) return;
     convertBtn.disabled = true;
     hideError();
-    statsGrid.style.display = 'none';
-    eqLogCard.style.display = 'none';
+    statsGrid.style.display   = 'none';
+    eqLogCard.style.display   = 'none';
     downloadRow.style.display = 'none';
+    saveStatus.className      = 'save-status';
     progressWrap.classList.add('visible');
     eqList.innerHTML = '';
 
     const t0 = performance.now();
 
     try {
-      setProgress(10, 'Reading file…'); await tick();
+      setProgress(10, 'Reading file…');          await tick();
       const buf = await currentFile.arrayBuffer();
 
-      setProgress(25, 'Unpacking document…'); await tick();
+      setProgress(25, 'Unpacking document…');    await tick();
       const zip = await JSZip.loadAsync(buf);
 
-      setProgress(40, 'Parsing XML…'); await tick();
+      setProgress(40, 'Parsing XML…');           await tick();
       const docXmlFile = zip.file('word/document.xml');
-      if (!docXmlFile) throw new Error('Not a valid .docx — document.xml not found.');
+      if (!docXmlFile) throw new Error('Not a valid .docx — document.xml missing.');
       const docXml = await docXmlFile.async('string');
 
-      setProgress(60, 'Converting equations…'); await tick();
+      setProgress(60, 'Converting equations…');  await tick();
       const allLog = [];
       const { xml: newXml, parasChanged, eqsFound } = processXmlBody(docXml, allLog);
       zip.file('word/document.xml', newXml);
 
-      // Headers / footers
+      // Also process headers / footers
       for (const filename of Object.keys(zip.files)) {
         if (/^word\/(header|footer)\d*\.xml$/.test(filename)) {
-          const hXml = await zip.file(filename).async('string');
+          const hXml    = await zip.file(filename).async('string');
           const { xml: newHXml } = processXmlBody(hXml, allLog);
           zip.file(filename, newHXml);
         }
       }
 
-      setProgress(80, 'Repacking…'); await tick();
+      setProgress(80, 'Repacking…');             await tick();
       const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
 
-      setProgress(100, 'Done!'); await tick(250);
+      setProgress(100, 'Done!');                 await tick(250);
       progressWrap.classList.remove('visible');
 
       const elapsed = Math.round(performance.now() - t0);
@@ -262,50 +265,51 @@
       downloadName = currentFile.name.replace(/\.docx$/i, '_unicode.docx');
 
       // Stats
-      document.getElementById('stat-paras').textContent = parasChanged;
-      document.getElementById('stat-eqs').textContent   = eqsFound;
-      document.getElementById('stat-time').textContent  = elapsed < 1000 ? elapsed + 'ms' : (elapsed/1000).toFixed(1) + 's';
+      $('stat-paras').textContent = parasChanged;
+      $('stat-eqs').textContent   = eqsFound;
+      $('stat-time').textContent  = elapsed < 1000
+        ? elapsed + 'ms' : (elapsed / 1000).toFixed(1) + 's';
       statsGrid.style.display = 'grid';
 
       // Conversion log
-      const seen = new Set();
-      const unique = allLog.filter(([k]) => { if(seen.has(k)) return false; seen.add(k); return true; });
+      const seen   = new Set();
+      const unique = allLog.filter(([k]) => { if (seen.has(k)) return false; seen.add(k); return true; });
       eqList.innerHTML = '';
       if (unique.length === 0) {
-        eqList.innerHTML = '<div style="padding:1rem 1.1rem;font-family:var(--mono);font-size:0.73rem;color:var(--muted)">No LaTeX equations detected in this document.</div>';
+        eqList.innerHTML = `<div style="padding:1rem 1.1rem;font-family:var(--mono);font-size:0.73rem;color:var(--muted)">
+          No LaTeX equations detected in this document.</div>`;
       } else {
-        unique.slice(0, 50).forEach(([latex, unicode]) => {
+        unique.slice(0, 60).forEach(([latex, unicode]) => {
           const item = document.createElement('div');
           item.className = 'eq-item';
           item.innerHTML = `
-            <span class="eq-latex">${escHtml(latex.length > 36 ? latex.slice(0,33)+'…' : latex)}</span>
+            <span class="eq-latex">${escHtml(latex.length   > 36 ? latex.slice(0,33)+'…'   : latex)}</span>
             <span class="eq-arrow">→</span>
-            <span class="eq-unicode">${escHtml(unicode.length > 26 ? unicode.slice(0,23)+'…' : unicode)}</span>
+            <span class="eq-unicode">${escHtml(unicode.length > 28 ? unicode.slice(0,25)+'…' : unicode)}</span>
           `;
           eqList.appendChild(item);
         });
+        if (unique.length > 60) {
+          eqList.innerHTML += `<div style="padding:0.5rem 1.1rem;font-family:var(--mono);font-size:0.7rem;color:var(--muted)">
+            … and ${unique.length - 60} more conversions</div>`;
+        }
       }
-      eqLogCard.style.display = 'block';
+      eqLogCard.style.display   = 'block';
       downloadRow.style.display = 'flex';
 
-      // ── Save to Firebase ──────────────────────────────────────
+      // ── Save metadata to Firestore ────────────────────────────
       if (currentUser) {
-        uploadStatus.className = 'upload-status visible';
-        uploadSpinner.style.display = 'block';
-        uploadLabel.textContent = 'Saving to your history…';
         try {
-          await saveConversion(currentUser.uid, blob, currentFile.name, { parasChanged, eqsFound });
-          uploadSpinner.style.display = 'none';
-          uploadLabel.textContent = '✓ Saved to history — available for 30 days';
-          uploadStatus.className = 'upload-status visible done';
-        } catch(e) {
-          uploadSpinner.style.display = 'none';
-          uploadLabel.textContent = 'Could not save to history (check Firebase config)';
-          uploadStatus.className = 'upload-status visible error';
+          await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
+          saveLabel.textContent = '✓ Logged to history — visible for 30 days';
+          saveStatus.className  = 'save-status visible';
+        } catch (e) {
+          saveLabel.textContent = '⚠ Could not save to history (check Firebase config)';
+          saveStatus.className  = 'save-status visible error';
         }
       }
 
-    } catch(err) {
+    } catch (err) {
       progressWrap.classList.remove('visible');
       showError(err.message || 'Unexpected error during conversion.');
     }
