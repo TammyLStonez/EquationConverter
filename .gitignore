@@ -1,0 +1,14 @@
+# ── Firebase credentials — NEVER commit this ──────────────────
+js/firebase.js
+
+# ── OS files ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor folders ─────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── Zip builds ─────────────────────────────────────────────────
+*.zip
