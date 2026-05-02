@@ -11,13 +11,15 @@ import { getFirestore }  from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getStorage }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ── ⚠ Replace with your Firebase project config ──────────────
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyCcSg1VwEG9eUvhb5Tvf-SmToOi7OhkcbA",
+  authDomain: "eqconvert-7371f.firebaseapp.com",
+  projectId: "eqconvert-7371f",
+  storageBucket: "eqconvert-7371f.firebasestorage.app",
+  messagingSenderId: "560238940023",
+  appId: "1:560238940023:web:407fd05a267752b800db72",
+  measurementId: "G-N4TG1KV1G3"
 };
 // ─────────────────────────────────────────────────────────────
 
