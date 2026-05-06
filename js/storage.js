@@ -14,11 +14,16 @@ const TTL_DAYS   = 30;
 
 // ── Save a conversion record ──────────────────────────────────
 export async function saveConversion(uid, originalName, stats) {
+  console.log('Inside saveConversion');
+  console.log('db:', db);
+  console.log('collection ref:', collection(db, COLLECTION));
+  
   const expiresAt = Timestamp.fromDate(
     new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000)
   );
   const outputName = originalName.replace(/\.docx$/i, '_unicode.docx');
 
+  console.log('About to call addDoc...');
   const docRef = await addDoc(collection(db, COLLECTION), {
     uid,
     originalName,
@@ -28,6 +33,7 @@ export async function saveConversion(uid, originalName, stats) {
     createdAt:    Timestamp.now(),
     expiresAt,
   });
+  console.log('addDoc succeeded, id:', docRef.id);
 
   return { id: docRef.id, outputName, expiresAt };
 }
