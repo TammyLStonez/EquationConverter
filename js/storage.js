@@ -5,7 +5,7 @@
 
 import { db } from "./firebase.js";
 import {
-  collection, addDoc, query, where, orderBy,
+  collection, addDoc, query, where,
   getDocs, deleteDoc, doc, Timestamp, limit,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -33,15 +33,18 @@ export async function saveConversion(uid, originalName, stats) {
 }
 
 // ── Fetch history for a user ──────────────────────────────────
+// Note: sorts client-side to avoid needing a composite Firestore index
 export async function fetchHistory(uid, maxItems = 50) {
   const q = query(
     collection(db, COLLECTION),
     where("uid", "==", uid),
-    orderBy("createdAt", "desc"),
     limit(maxItems)
   );
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Sort by createdAt descending on the client side
+  docs.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  return docs;
 }
 
 // ── Delete a single record ────────────────────────────────────

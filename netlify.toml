@@ -2,6 +2,11 @@
 # Serves index.html for auth routes, routes pages correctly.
 
 [[redirects]]
+  from = "/js/firebase.js"
+  to   = "/.netlify/functions/firebase-config"
+  status = 200
+
+[[redirects]]
   from = "/app"
   to   = "/app.html"
   status = 200
