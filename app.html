@@ -301,8 +301,11 @@
       if (currentUser) {
       try {
         console.log('Attempting save with UID:', currentUser.uid);
-        await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
-        console.log('Save succeeded');
+        console.log('File name:', currentFile.name);
+        console.log('Stats:', { parasChanged, eqsFound });
+        console.log('About to call saveConversion...');
+        const result = await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
+        console.log('saveConversion returned:', result);
         saveLabel.textContent = '✓ Logged to history — visible for 30 days';
         saveStatus.className  = 'save-status visible';
       } catch (e) {
