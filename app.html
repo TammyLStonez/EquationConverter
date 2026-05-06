@@ -299,15 +299,20 @@
 
       // ── Save metadata to Firestore ────────────────────────────
       if (currentUser) {
-        try {
-          await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
-          saveLabel.textContent = '✓ Logged to history — visible for 30 days';
-          saveStatus.className  = 'save-status visible';
-        } catch (e) {
-          saveLabel.textContent = '⚠ Could not save to history (check Firebase config)';
-          saveStatus.className  = 'save-status visible error';
-        }
+      try {
+        console.log('Attempting save with UID:', currentUser.uid);
+        await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
+        console.log('Save succeeded');
+        saveLabel.textContent = '✓ Logged to history — visible for 30 days';
+        saveStatus.className  = 'save-status visible';
+      } catch (e) {
+        console.error('Save failed:', e);
+        console.error('Error code:', e.code);
+        console.error('Error message:', e.message);
+        saveLabel.textContent = '⚠ Could not save to history (check Firebase config)';
+        saveStatus.className  = 'save-status visible error';
       }
+    }
 
     } catch (err) {
       progressWrap.classList.remove('visible');
