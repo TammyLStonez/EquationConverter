@@ -19,7 +19,7 @@ eqconvert/
 │   ├── converter.js  ← LaTeX → Unicode engine + .docx processor
 │   ├── storage.js    ← Firestore metadata (no file storage)
 │   └── nav.js        ← Shared navigation bar
-|── netlify.toml      ← Routing rules for Netlify
+├── netlify.toml      ← Routing rules for Netlify
 ├── favicon.svg          ← new
 ├── site.webmanifest     ← new
 ├── sw.js                ← new
@@ -138,7 +138,7 @@ and are downloaded immediately after conversion.
 | Operators          | `\times` → ×, `\sum` → ∑, `\int` → ∫               |
 | Relations          | `\leq` → ≤, `\approx` → ≈, `\equiv` → ≡            |
 | Arrows             | `\rightarrow` → →, `\implies` → ⟹, `\iff` → ⟺    |
-| Fractions          | `\frac{1}{2}` → ½, `\frac{a}{b}` → a⁄b             |
+| Fractions          | `\frac{1}{2}` → ½, `\frac{a}{b}` → a/b             |
 | Roots              | `\sqrt{x}` → √x, `\sqrt[3]{x}` → ∛x               |
 | Superscripts       | `x^{2}` → x², `E^{n}` → Eⁿ                         |
 | Subscripts         | `H_{2}O` → H₂O, `x_{i}` → xᵢ                      |

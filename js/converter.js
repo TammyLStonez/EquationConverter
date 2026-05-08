@@ -248,7 +248,7 @@ export function convertInner(expr) {
       if (VULGAR_FRACTIONS[vk]) return VULGAR_FRACTIONS[vk];
       // Short num+den → fraction slash ⁄
       if (num.length <= 5 && den.length <= 5 && !/[+\-*/()]/.test(num+den)) {
-        return `${num}⁄${den}`;
+        return `${num}/${den}`;
       }
       // Complex → parenthesized
       const wrapNum = /[+\-]/.test(num) ? `(${num})` : num;
