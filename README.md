@@ -19,7 +19,13 @@ eqconvert/
 │   ├── converter.js  ← LaTeX → Unicode engine + .docx processor
 │   ├── storage.js    ← Firestore metadata (no file storage)
 │   └── nav.js        ← Shared navigation bar
-└── netlify.toml      ← Routing rules for Netlify
+|── netlify.toml      ← Routing rules for Netlify
+├── favicon.svg          ← new
+├── site.webmanifest     ← new
+├── sw.js                ← new
+└── icons/
+    ├── icon-192.svg     ← new
+    └── icon-512.svg     ← new
 ```
 
 ---

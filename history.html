@@ -1,60 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EqConvert — History</title>
-<link rel="stylesheet" href="/css/style.css">
-<style>
-  .history-meta-row {
-    width: 100%; max-width: 700px;
-    display: flex; align-items: center; justify-content: space-between;
-    animation: fadeUp 0.4s ease both;
-  }
-  .history-count {
-    font-family: var(--mono); font-size: 0.73rem; color: var(--muted);
-  }
-  .ttl-note {
-    width: 100%; max-width: 700px;
-    background: var(--amber-dim);
-    border: 1px solid rgba(240,165,0,0.2);
-    border-radius: var(--radius-sm);
-    padding: 0.7rem 1rem;
-    font-family: var(--mono); font-size: 0.72rem; color: var(--amber);
-    display: flex; align-items: center; gap: 0.5rem;
-    animation: fadeUp 0.3s ease both;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EqConvert — History</title>
+  <link rel="stylesheet" href="/css/style.css">
 
-  /* Stats chips on history items */
-  .history-chips {
-    display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;
-  }
-  .chip {
-    font-family: var(--mono); font-size: 0.65rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 99px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    white-space: nowrap;
-  }
-  .chip.teal  { border-color: rgba(0,229,195,0.25); color: var(--teal); }
-  .chip.amber { border-color: rgba(240,165,0,0.25);  color: var(--amber); }
+  <!-- PWA + Favicon -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#00e5c3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EqConvert">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <style>
+    .history-meta-row {
+      width: 100%; max-width: 700px;
+      display: flex; align-items: center; justify-content: space-between;
+      animation: fadeUp 0.4s ease both;
+    }
+    .history-count {
+      font-family: var(--mono); font-size: 0.73rem; color: var(--muted);
+    }
+    .ttl-note {
+      width: 100%; max-width: 700px;
+      background: var(--amber-dim);
+      border: 1px solid rgba(240,165,0,0.2);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem 1rem;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--amber);
+      display: flex; align-items: center; gap: 0.5rem;
+      animation: fadeUp 0.3s ease both;
+    }
 
-  /* Skeleton shimmer */
-  .skeleton {
-    background: linear-gradient(90deg, var(--surface) 25%, var(--panel) 50%, var(--surface) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease infinite;
-    border-radius: 4px; height: 0.85rem;
-  }
-  @keyframes shimmer { to { background-position: -200% 0; } }
-  .skeleton-item {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 1rem 1.25rem;
-    display: flex; align-items: center; gap: 1rem;
-  }
-</style>
+    /* Stats chips on history items */
+    .history-chips {
+      display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.35rem;
+    }
+    .chip {
+      font-family: var(--mono); font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .chip.teal  { border-color: rgba(0,229,195,0.25); color: var(--teal); }
+    .chip.amber { border-color: rgba(240,165,0,0.25);  color: var(--amber); }
+
+    /* Skeleton shimmer */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--panel) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease infinite;
+      border-radius: 4px; height: 0.85rem;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .skeleton-item {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.25rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+  </style>
 </head>
 <body>
 
@@ -252,6 +262,14 @@
   }
 
   $('refresh-btn').addEventListener('click', loadHistory);
+ 
+  // Register service worker for PWA functionality
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .catch(err => console.warn('SW registration failed:', err));
+    });
+  }
 </script>
 </body>
 </html>

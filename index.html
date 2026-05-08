@@ -1,99 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EqConvert — Sign In</title>
-<link rel="stylesheet" href="/css/style.css">
-<style>
-  .auth-wrap {
-    width: 100%; max-width: 420px;
-    display: flex; flex-direction: column; gap: 1rem;
-    margin: auto;
-    animation: fadeUp 0.5s ease both;
-  }
-  .auth-card {
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 2rem;
-    display: flex; flex-direction: column; gap: 1.25rem;
-  }
-  .auth-tabs {
-    display: grid; grid-template-columns: 1fr 1fr;
-    background: var(--panel); border-radius: var(--radius-sm);
-    padding: 3px; gap: 3px;
-  }
-  .auth-tab {
-    padding: 0.5rem; border-radius: 6px;
-    font-size: 0.82rem; font-weight: 700;
-    cursor: pointer; border: none; background: none;
-    color: var(--muted); font-family: var(--sans);
-    transition: background var(--transition), color var(--transition);
-  }
-  .auth-tab.active { background: var(--surface); color: var(--teal); }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EqConvert — Sign In</title>
+  <link rel="stylesheet" href="/css/style.css">
 
-  .google-btn {
-    display: flex; align-items: center; justify-content: center; gap: 0.6rem;
-    width: 100%; padding: 0.72rem;
-    background: var(--panel); border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm); cursor: pointer;
-    font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
-    color: var(--text); transition: border-color var(--transition), background var(--transition);
-  }
-  .google-btn:hover { border-color: var(--border-hi); background: #1a2030; }
-  .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  <!-- PWA + Favicon -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#00e5c3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EqConvert">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <style>
+    .auth-wrap {
+      width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 1rem;
+      margin: auto;
+      animation: fadeUp 0.5s ease both;
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .auth-tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--panel); border-radius: var(--radius-sm);
+      padding: 3px; gap: 3px;
+    }
+    .auth-tab {
+      padding: 0.5rem; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; border: none; background: none;
+      color: var(--muted); font-family: var(--sans);
+      transition: background var(--transition), color var(--transition);
+    }
+    .auth-tab.active { background: var(--surface); color: var(--teal); }
 
-  .hero-text {
-    text-align: center; margin-bottom: 0.5rem;
-  }
-  .hero-text h2 { font-size: 1.2rem; font-weight: 800; color: #fff; }
-  .hero-text p { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+    .google-btn {
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      width: 100%; padding: 0.72rem;
+      background: var(--panel); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); cursor: pointer;
+      font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
+      color: var(--text); transition: border-color var(--transition), background var(--transition);
+    }
+    .google-btn:hover { border-color: var(--border-hi); background: #1a2030; }
+    .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-  /* Convert animation in hero */
-  .eq-demo {
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--muted);
-    padding: 0.6rem 0;
-    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
-  }
-  .eq-demo .from { color: var(--amber); }
-  .eq-demo .to   { color: var(--teal); }
-  .eq-demo .arr  { color: var(--muted); }
+    .hero-text {
+      text-align: center; margin-bottom: 0.5rem;
+    }
+    .hero-text h2 { font-size: 1.2rem; font-weight: 800; color: #fff; }
+    .hero-text p { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
 
-  .features {
-    width: 100%; max-width: 420px;
-    display: flex; flex-direction: column; gap: 0.5rem;
-  }
-  .feature-row {
-    display: flex; align-items: center; gap: 0.6rem;
-    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
-  }
-  .feature-row::before { content: '✓'; color: var(--teal); flex-shrink: 0; }
+    /* Convert animation in hero */
+    .eq-demo {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 0.6rem 0;
+      display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+    }
+    .eq-demo .from { color: var(--amber); }
+    .eq-demo .to   { color: var(--teal); }
+    .eq-demo .arr  { color: var(--muted); }
 
-  .page { justify-content: center; gap: 1.5rem; padding-top: 4rem; }
+    .features {
+      width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .feature-row {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    }
+    .feature-row::before { content: '✓'; color: var(--teal); flex-shrink: 0; }
 
-  /* Password toggle */
-  .input-password-wrap {
-    position: relative; display: flex; align-items: center;
-  }
-  .input-password-wrap .input {
-    padding-right: 2.8rem;
-    width: 100%;
-  }
-  .pw-toggle {
-    position: absolute; right: 0.75rem;
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); padding: 0.25rem;
-    display: flex; align-items: center; justify-content: center;
-    transition: color var(--transition);
-    line-height: 0;
-  }
-  .pw-toggle:hover { color: var(--teal); }
-  .pw-toggle svg { width: 18px; height: 18px; pointer-events: none; }
-</style>
+    .page { justify-content: center; gap: 1.5rem; padding-top: 4rem; }
+
+    /* Password toggle */
+    .input-password-wrap {
+      position: relative; display: flex; align-items: center;
+    }
+    .input-password-wrap .input {
+      padding-right: 2.8rem;
+      width: 100%;
+    }
+    .pw-toggle {
+      position: absolute; right: 0.75rem;
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); padding: 0.25rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: color var(--transition);
+      line-height: 0;
+    }
+    .pw-toggle:hover { color: var(--teal); }
+    .pw-toggle svg { width: 18px; height: 18px; pointer-events: none; }
+  </style>
 </head>
 <body>
 
@@ -327,6 +337,14 @@
     if (formSignin.style.display !== 'none') btnSignin.click();
     else btnSignup.click();
   });
+  
+  // Register service worker for PWA functionality
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .catch(err => console.warn('SW registration failed:', err));
+    });
+  }
 </script>
 </body>
 </html>

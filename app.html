@@ -1,330 +1,409 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EqConvert — Convert</title>
-<link rel="stylesheet" href="/css/style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<style>
-  .convert-actions {
-    width: 100%; max-width: 700px;
-    display: flex; gap: 0.75rem;
-    animation: fadeUp 0.4s ease both;
-  }
-  .eq-log-list { padding: 0.4rem 0; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EqConvert — Convert</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-  .save-status {
-    width: 100%; max-width: 700px;
-    background: var(--surface);
-    border: 1.5px solid rgba(0,229,195,0.2);
-    border-radius: var(--radius);
-    padding: 0.8rem 1.1rem;
-    font-family: var(--mono); font-size: 0.75rem; color: var(--teal);
-    display: none; align-items: center; gap: 0.6rem;
-    animation: fadeUp 0.3s ease both;
-  }
-  .save-status.visible  { display: flex; }
-  .save-status.error    { color: var(--red); border-color: rgba(255,77,109,0.2); }
-</style>
+  <!-- PWA + Favicon -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#00e5c3">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EqConvert">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <style>
+    .convert-actions {
+      width: 100%; max-width: 700px;
+      display: flex; gap: 0.75rem;
+      animation: fadeUp 0.4s ease both;
+    }
+    .eq-log-list { padding: 0.4rem 0; }
+
+    .save-status {
+      width: 100%; max-width: 700px;
+      background: var(--surface);
+      border: 1.5px solid rgba(0,229,195,0.2);
+      border-radius: var(--radius);
+      padding: 0.8rem 1.1rem;
+      font-family: var(--mono); font-size: 0.75rem; color: var(--teal);
+      display: none; align-items: center; gap: 0.6rem;
+      animation: fadeUp 0.3s ease both;
+    }
+    .save-status.visible  { display: flex; }
+    .save-status.error    { color: var(--red); border-color: rgba(255,77,109,0.2); }
+    .pwa-install-btn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.1rem;
+      background: var(--surface);
+      border: 1.5px solid rgba(0,229,195,0.35);
+      border-radius: 99px;
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--teal);
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 16px var(--teal-glow);
+      transition: all var(--transition);
+      animation: fadeUp 0.4s ease both;
+    }
+    .pwa-install-btn:hover {
+      background: var(--panel);
+      border-color: var(--teal);
+      box-shadow: 0 4px 28px rgba(0,0,0,0.5), 0 0 24px rgba(0,229,195,0.18);
+      transform: translateY(-2px);
+    }
+    .pwa-install-btn.hidden { display: none; }
+  </style>
 </head>
 <body>
 
-<div class="bg-symbols" id="bg-symbols"></div>
-<nav class="nav" id="nav"></nav>
+  <div class="bg-symbols" id="bg-symbols"></div>
+  <nav class="nav" id="nav"></nav>
 
-<main class="page">
+  <main class="page">
 
-  <div class="page-header">
-    <h1 class="page-title">Convert <span>Equations</span></h1>
-    <p class="page-sub">Drop a .docx · LaTeX → Unicode · Formatting preserved</p>
-  </div>
-
-  <!-- Drop zone -->
-  <div class="drop-zone" id="drop-zone">
-    <div class="drop-icon">📄</div>
-    <div class="drop-label">Drop your .docx file here</div>
-    <div class="drop-sub">
-      Handles $…$&nbsp;&nbsp;$$…$$&nbsp;&nbsp;\(…\)&nbsp;&nbsp;\[…\]&nbsp;&nbsp;\begin{equation}…
+    <div class="page-header">
+      <h1 class="page-title">Convert <span>Equations</span></h1>
+      <p class="page-sub">Drop a .docx · LaTeX → Unicode · Formatting preserved</p>
     </div>
-    <button class="btn btn-outline" id="browse-btn" style="margin-top:0.25rem">Browse file</button>
-    <input type="file" id="file-input" accept=".docx" style="display:none">
-  </div>
 
-  <!-- Selected file bar -->
-  <div class="file-bar" id="file-bar">
-    <span style="font-size:1.3rem;flex-shrink:0">📝</span>
-    <span class="file-bar-name" id="file-bar-name"></span>
-    <span class="file-bar-size" id="file-bar-size"></span>
-    <button class="clear-btn" id="clear-btn" title="Remove">✕</button>
-  </div>
-
-  <!-- Error -->
-  <div class="alert alert-error max-700" id="error-box"></div>
-
-  <!-- Convert button -->
-  <div class="convert-actions" id="convert-actions" style="display:none">
-    <button class="btn btn-primary" style="flex:1" id="convert-btn">⚗ Convert Equations</button>
-  </div>
-
-  <!-- Progress -->
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <div class="progress-label" id="progress-label">Initialising…</div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid" id="stats-grid" style="display:none">
-    <div class="stat-card">
-      <div class="stat-num" id="stat-paras">0</div>
-      <div class="stat-lbl">Paragraphs converted</div>
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">📄</div>
+      <div class="drop-label">Drop your .docx file here</div>
+      <div class="drop-sub">
+        Handles $…$&nbsp;&nbsp;$$…$$&nbsp;&nbsp;\(…\)&nbsp;&nbsp;\[…\]&nbsp;&nbsp;\begin{equation}…
+      </div>
+      <button class="btn btn-outline" id="browse-btn" style="margin-top:0.25rem">Browse file</button>
+      <input type="file" id="file-input" accept=".docx" style="display:none">
     </div>
-    <div class="stat-card">
-      <div class="stat-num" id="stat-eqs">0</div>
-      <div class="stat-lbl">Equations found</div>
+
+    <!-- Selected file bar -->
+    <div class="file-bar" id="file-bar">
+      <span style="font-size:1.3rem;flex-shrink:0">📝</span>
+      <span class="file-bar-name" id="file-bar-name"></span>
+      <span class="file-bar-size" id="file-bar-size"></span>
+      <button class="clear-btn" id="clear-btn" title="Remove">✕</button>
     </div>
-    <div class="stat-card">
-      <div class="stat-num" id="stat-time">0ms</div>
-      <div class="stat-lbl">Processing time</div>
+
+    <!-- Error -->
+    <div class="alert alert-error max-700" id="error-box"></div>
+
+    <!-- Convert button -->
+    <div class="convert-actions" id="convert-actions" style="display:none">
+      <button class="btn btn-primary" style="flex:1" id="convert-btn">⚗ Convert Equations</button>
     </div>
-  </div>
 
-  <!-- Conversion log -->
-  <div class="card max-700" id="eq-log-card" style="display:none">
-    <div class="card-header"><span class="dot pulse"></span> Conversion log</div>
-    <div class="eq-log-list scrollable" id="eq-list"></div>
-  </div>
+    <!-- Progress -->
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label">Initialising…</div>
+    </div>
 
-  <!-- Save status -->
-  <div class="save-status" id="save-status">
-    <span id="save-label"></span>
-  </div>
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid" style="display:none">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-paras">0</div>
+        <div class="stat-lbl">Paragraphs converted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-eqs">0</div>
+        <div class="stat-lbl">Equations found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-time">0ms</div>
+        <div class="stat-lbl">Processing time</div>
+      </div>
+    </div>
 
-  <!-- Download + reset -->
-  <div class="convert-actions" id="download-row" style="display:none">
-    <button class="btn btn-outline" style="flex:1" id="download-btn">⬇ Download Converted File</button>
-    <button class="btn btn-ghost" id="reset-btn">Convert another</button>
-  </div>
+    <!-- Conversion log -->
+    <div class="card max-700" id="eq-log-card" style="display:none">
+      <div class="card-header"><span class="dot pulse"></span> Conversion log</div>
+      <div class="eq-log-list scrollable" id="eq-list"></div>
+    </div>
 
-</main>
+    <!-- Save status -->
+    <div class="save-status" id="save-status">
+      <span id="save-label"></span>
+    </div>
 
-<script type="module">
-  import { requireAuth }                    from "/js/auth.js";
-  import { initNav }                        from "/js/nav.js";
-  import { convertLatexInText, processXmlBody } from "/js/converter.js";
-  import { saveConversion, purgeExpired }   from "/js/storage.js";
+    <!-- Download + reset -->
+    <div class="convert-actions" id="download-row" style="display:none">
+      <button class="btn btn-outline" style="flex:1" id="download-btn">⬇ Download Converted File</button>
+      <button class="btn btn-ghost" id="reset-btn">Convert another</button>
+    </div>
 
-  // ── Floating symbols ──────────────────────────────────────────
-  (() => {
-    const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','λ','→','√','±','⇌','⟹'];
-    const el   = document.getElementById('bg-symbols');
-    for (let i = 0; i < 16; i++) {
-      const s   = document.createElement('span');
-      s.className = 'bg-sym';
-      s.textContent = syms[i % syms.length];
-      const dur = 22 + Math.random() * 20;
-      s.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.2}rem`;
-      el.appendChild(s);
-    }
-  })();
+    <!-- PWA install button -->
+    <button class="pwa-install-btn hidden" id="pwa-install-btn" aria-label="Add EqConvert to home screen">
+      ⊕ Add to home screen
+    </button>
 
-  // ── DOM refs ──────────────────────────────────────────────────
-  const $ = id => document.getElementById(id);
-  const dropZone      = $('drop-zone');
-  const fileInput     = $('file-input');
-  const browseBtn     = $('browse-btn');
-  const fileBar       = $('file-bar');
-  const fileBarName   = $('file-bar-name');
-  const fileBarSize   = $('file-bar-size');
-  const clearBtn      = $('clear-btn');
-  const errorBox      = $('error-box');
-  const convertActions= $('convert-actions');
-  const convertBtn    = $('convert-btn');
-  const progressWrap  = $('progress-wrap');
-  const progressFill  = $('progress-fill');
-  const progressLabel = $('progress-label');
-  const statsGrid     = $('stats-grid');
-  const eqLogCard     = $('eq-log-card');
-  const eqList        = $('eq-list');
-  const saveStatus    = $('save-status');
-  const saveLabel     = $('save-label');
-  const downloadRow   = $('download-row');
-  const downloadBtn   = $('download-btn');
-  const resetBtn      = $('reset-btn');
+  </main>
 
-  let currentUser  = null;
-  let currentFile  = null;
-  let downloadBlob = null;
-  let downloadName = '';
+  <script type="module">
+    import { requireAuth }                    from "/js/auth.js";
+    import { initNav }                        from "/js/nav.js";
+    import { convertLatexInText, processXmlBody } from "/js/converter.js";
+    import { saveConversion, purgeExpired }   from "/js/storage.js";
 
-  // ── Auth guard ────────────────────────────────────────────────
-  requireAuth(async user => {
-    currentUser = user;
-    initNav('app');
-    try { await purgeExpired(user.uid); } catch (_) {}
-  });
-
-  // ── Helpers ───────────────────────────────────────────────────
-  const fmtBytes = n =>
-    n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
-  const tick     = ms  => new Promise(r => setTimeout(r, ms || 16));
-  const escHtml  = s   => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const setProgress = (pct, lbl) => { progressFill.style.width = pct+'%'; progressLabel.textContent = lbl; };
-  const showError   = msg => { errorBox.textContent = '⚠ '+msg; errorBox.classList.add('visible'); };
-  const hideError   = ()  => errorBox.classList.remove('visible');
-
-  // ── File selection ────────────────────────────────────────────
-  function setFile(file) {
-    if (!file?.name.toLowerCase().endsWith('.docx')) {
-      showError('Please select a .docx file.'); return;
-    }
-    hideError();
-    currentFile  = file;
-    downloadBlob = null;
-    fileBarName.textContent = file.name;
-    fileBarSize.textContent = fmtBytes(file.size);
-    fileBar.classList.add('visible');
-    convertActions.style.display   = 'flex';
-    statsGrid.style.display         = 'none';
-    eqLogCard.style.display         = 'none';
-    downloadRow.style.display       = 'none';
-    saveStatus.className            = 'save-status';
-  }
-
-  function resetAll() {
-    currentFile = downloadBlob = null;
-    fileBar.classList.remove('visible');
-    convertActions.style.display  = 'none';
-    progressWrap.classList.remove('visible');
-    statsGrid.style.display        = 'none';
-    eqLogCard.style.display        = 'none';
-    downloadRow.style.display      = 'none';
-    saveStatus.className           = 'save-status';
-    eqList.innerHTML               = '';
-    fileInput.value                = '';
-    hideError();
-  }
-
-  // ── Drag & drop ───────────────────────────────────────────────
-  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop',      e  => { e.preventDefault(); dropZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
-  browseBtn.addEventListener('click',    e  => { e.stopPropagation(); fileInput.click(); });
-  fileInput.addEventListener('change',   ()  => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-  clearBtn.addEventListener('click',  resetAll);
-  resetBtn.addEventListener('click',  resetAll);
-
-  // ── Main conversion ───────────────────────────────────────────
-  convertBtn.addEventListener('click', async () => {
-    if (!currentFile) return;
-    convertBtn.disabled = true;
-    hideError();
-    statsGrid.style.display   = 'none';
-    eqLogCard.style.display   = 'none';
-    downloadRow.style.display = 'none';
-    saveStatus.className      = 'save-status';
-    progressWrap.classList.add('visible');
-    eqList.innerHTML = '';
-
-    const t0 = performance.now();
-
-    try {
-      setProgress(10, 'Reading file…');          await tick();
-      const buf = await currentFile.arrayBuffer();
-
-      setProgress(25, 'Unpacking document…');    await tick();
-      const zip = await JSZip.loadAsync(buf);
-
-      setProgress(40, 'Parsing XML…');           await tick();
-      const docXmlFile = zip.file('word/document.xml');
-      if (!docXmlFile) throw new Error('Not a valid .docx — document.xml missing.');
-      const docXml = await docXmlFile.async('string');
-
-      setProgress(60, 'Converting equations…');  await tick();
-      const allLog = [];
-      const { xml: newXml, parasChanged, eqsFound } = processXmlBody(docXml, allLog);
-      zip.file('word/document.xml', newXml);
-
-      // Also process headers / footers
-      for (const filename of Object.keys(zip.files)) {
-        if (/^word\/(header|footer)\d*\.xml$/.test(filename)) {
-          const hXml    = await zip.file(filename).async('string');
-          const { xml: newHXml } = processXmlBody(hXml, allLog);
-          zip.file(filename, newHXml);
-        }
+    // ── Floating symbols ──────────────────────────────────────────
+    (() => {
+      const syms = ['∑','∫','∂','α','β','γ','∇','∞','π','Δ','λ','→','√','±','⇌','⟹'];
+      const el   = document.getElementById('bg-symbols');
+      for (let i = 0; i < 16; i++) {
+        const s   = document.createElement('span');
+        s.className = 'bg-sym';
+        s.textContent = syms[i % syms.length];
+        const dur = 22 + Math.random() * 20;
+        s.style.cssText = `left:${Math.random()*100}%;animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;font-size:${1+Math.random()*2.2}rem`;
+        el.appendChild(s);
       }
+    })();
 
-      setProgress(80, 'Repacking…');             await tick();
-      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    // ── DOM refs ──────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+    const dropZone      = $('drop-zone');
+    const fileInput     = $('file-input');
+    const browseBtn     = $('browse-btn');
+    const fileBar       = $('file-bar');
+    const fileBarName   = $('file-bar-name');
+    const fileBarSize   = $('file-bar-size');
+    const clearBtn      = $('clear-btn');
+    const errorBox      = $('error-box');
+    const convertActions= $('convert-actions');
+    const convertBtn    = $('convert-btn');
+    const progressWrap  = $('progress-wrap');
+    const progressFill  = $('progress-fill');
+    const progressLabel = $('progress-label');
+    const statsGrid     = $('stats-grid');
+    const eqLogCard     = $('eq-log-card');
+    const eqList        = $('eq-list');
+    const saveStatus    = $('save-status');
+    const saveLabel     = $('save-label');
+    const downloadRow   = $('download-row');
+    const downloadBtn   = $('download-btn');
+    const resetBtn      = $('reset-btn');
 
-      setProgress(100, 'Done!');                 await tick(250);
+    let currentUser  = null;
+    let currentFile  = null;
+    let downloadBlob = null;
+    let downloadName = '';
+
+    // ── Auth guard ────────────────────────────────────────────────
+    requireAuth(async user => {
+      currentUser = user;
+      initNav('app');
+      try { await purgeExpired(user.uid); } catch (_) {}
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────
+    const fmtBytes = n =>
+      n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
+    const tick     = ms  => new Promise(r => setTimeout(r, ms || 16));
+    const escHtml  = s   => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const setProgress = (pct, lbl) => { progressFill.style.width = pct+'%'; progressLabel.textContent = lbl; };
+    const showError   = msg => { errorBox.textContent = '⚠ '+msg; errorBox.classList.add('visible'); };
+    const hideError   = ()  => errorBox.classList.remove('visible');
+
+    // ── File selection ────────────────────────────────────────────
+    function setFile(file) {
+      if (!file?.name.toLowerCase().endsWith('.docx')) {
+        showError('Please select a .docx file.'); return;
+      }
+      hideError();
+      currentFile  = file;
+      downloadBlob = null;
+      fileBarName.textContent = file.name;
+      fileBarSize.textContent = fmtBytes(file.size);
+      fileBar.classList.add('visible');
+      convertActions.style.display   = 'flex';
+      statsGrid.style.display         = 'none';
+      eqLogCard.style.display         = 'none';
+      downloadRow.style.display       = 'none';
+      saveStatus.className            = 'save-status';
+    }
+
+    function resetAll() {
+      currentFile = downloadBlob = null;
+      fileBar.classList.remove('visible');
+      convertActions.style.display  = 'none';
       progressWrap.classList.remove('visible');
+      statsGrid.style.display        = 'none';
+      eqLogCard.style.display        = 'none';
+      downloadRow.style.display      = 'none';
+      saveStatus.className           = 'save-status';
+      eqList.innerHTML               = '';
+      fileInput.value                = '';
+      hideError();
+    }
 
-      const elapsed = Math.round(performance.now() - t0);
-      downloadBlob = blob;
-      downloadName = currentFile.name.replace(/\.docx$/i, '_unicode.docx');
+    // ── Drag & drop ───────────────────────────────────────────────
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop',      e  => { e.preventDefault(); dropZone.classList.remove('dragover'); setFile(e.dataTransfer.files[0]); });
+    browseBtn.addEventListener('click',    e  => { e.stopPropagation(); fileInput.click(); });
+    fileInput.addEventListener('change',   ()  => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+    clearBtn.addEventListener('click',  resetAll);
+    resetBtn.addEventListener('click',  resetAll);
 
-      // Stats
-      $('stat-paras').textContent = parasChanged;
-      $('stat-eqs').textContent   = eqsFound;
-      $('stat-time').textContent  = elapsed < 1000
-        ? elapsed + 'ms' : (elapsed / 1000).toFixed(1) + 's';
-      statsGrid.style.display = 'grid';
-
-      // Conversion log
-      const seen   = new Set();
-      const unique = allLog.filter(([k]) => { if (seen.has(k)) return false; seen.add(k); return true; });
+    // ── Main conversion ───────────────────────────────────────────
+    convertBtn.addEventListener('click', async () => {
+      if (!currentFile) return;
+      convertBtn.disabled = true;
+      hideError();
+      statsGrid.style.display   = 'none';
+      eqLogCard.style.display   = 'none';
+      downloadRow.style.display = 'none';
+      saveStatus.className      = 'save-status';
+      progressWrap.classList.add('visible');
       eqList.innerHTML = '';
-      if (unique.length === 0) {
-        eqList.innerHTML = `<div style="padding:1rem 1.1rem;font-family:var(--mono);font-size:0.73rem;color:var(--muted)">
-          No LaTeX equations detected in this document.</div>`;
-      } else {
-        unique.slice(0, 60).forEach(([latex, unicode]) => {
-          const item = document.createElement('div');
-          item.className = 'eq-item';
-          item.innerHTML = `
-            <span class="eq-latex">${escHtml(latex.length   > 36 ? latex.slice(0,33)+'…'   : latex)}</span>
-            <span class="eq-arrow">→</span>
-            <span class="eq-unicode">${escHtml(unicode.length > 28 ? unicode.slice(0,25)+'…' : unicode)}</span>
-          `;
-          eqList.appendChild(item);
-        });
-        if (unique.length > 60) {
-          eqList.innerHTML += `<div style="padding:0.5rem 1.1rem;font-family:var(--mono);font-size:0.7rem;color:var(--muted)">
-            … and ${unique.length - 60} more conversions</div>`;
-        }
-      }
-      eqLogCard.style.display   = 'block';
-      downloadRow.style.display = 'flex';
 
-      // ── Save metadata to Firestore ────────────────────────────
-      if (currentUser) {
-        try {
-          await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
-          saveLabel.textContent = '✓ Logged to history — visible for 30 days';
-          saveStatus.className  = 'save-status visible';
-        } catch (e) {
-          saveLabel.textContent = '⚠ Could not save to history (check Firebase config)';
-          saveStatus.className  = 'save-status visible error';
+      const t0 = performance.now();
+
+      try {
+        setProgress(10, 'Reading file…');          await tick();
+        const buf = await currentFile.arrayBuffer();
+
+        setProgress(25, 'Unpacking document…');    await tick();
+        const zip = await JSZip.loadAsync(buf);
+
+        setProgress(40, 'Parsing XML…');           await tick();
+        const docXmlFile = zip.file('word/document.xml');
+        if (!docXmlFile) throw new Error('Not a valid .docx — document.xml missing.');
+        const docXml = await docXmlFile.async('string');
+
+        setProgress(60, 'Converting equations…');  await tick();
+        const allLog = [];
+        const { xml: newXml, parasChanged, eqsFound } = processXmlBody(docXml, allLog);
+        zip.file('word/document.xml', newXml);
+
+        // Also process headers / footers
+        for (const filename of Object.keys(zip.files)) {
+          if (/^word\/(header|footer)\d*\.xml$/.test(filename)) {
+            const hXml    = await zip.file(filename).async('string');
+            const { xml: newHXml } = processXmlBody(hXml, allLog);
+            zip.file(filename, newHXml);
+          }
         }
+
+        setProgress(80, 'Repacking…');             await tick();
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+        setProgress(100, 'Done!');                 await tick(250);
+        progressWrap.classList.remove('visible');
+
+        const elapsed = Math.round(performance.now() - t0);
+        downloadBlob = blob;
+        downloadName = currentFile.name.replace(/\.docx$/i, '_unicode.docx');
+
+        // Stats
+        $('stat-paras').textContent = parasChanged;
+        $('stat-eqs').textContent   = eqsFound;
+        $('stat-time').textContent  = elapsed < 1000
+          ? elapsed + 'ms' : (elapsed / 1000).toFixed(1) + 's';
+        statsGrid.style.display = 'grid';
+
+        // Conversion log
+        const seen   = new Set();
+        const unique = allLog.filter(([k]) => { if (seen.has(k)) return false; seen.add(k); return true; });
+        eqList.innerHTML = '';
+        if (unique.length === 0) {
+          eqList.innerHTML = `<div style="padding:1rem 1.1rem;font-family:var(--mono);font-size:0.73rem;color:var(--muted)">
+            No LaTeX equations detected in this document.</div>`;
+        } else {
+          unique.slice(0, 60).forEach(([latex, unicode]) => {
+            const item = document.createElement('div');
+            item.className = 'eq-item';
+            item.innerHTML = `
+              <span class="eq-latex">${escHtml(latex.length   > 36 ? latex.slice(0,33)+'…'   : latex)}</span>
+              <span class="eq-arrow">→</span>
+              <span class="eq-unicode">${escHtml(unicode.length > 28 ? unicode.slice(0,25)+'…' : unicode)}</span>
+            `;
+            eqList.appendChild(item);
+          });
+          if (unique.length > 60) {
+            eqList.innerHTML += `<div style="padding:0.5rem 1.1rem;font-family:var(--mono);font-size:0.7rem;color:var(--muted)">
+              … and ${unique.length - 60} more conversions</div>`;
+          }
+        }
+        eqLogCard.style.display   = 'block';
+        downloadRow.style.display = 'flex';
+
+        // ── Save metadata to Firestore ────────────────────────────
+        if (currentUser) {
+          try {
+            await saveConversion(currentUser.uid, currentFile.name, { parasChanged, eqsFound });
+            saveLabel.textContent = '✓ Logged to history — visible for 30 days';
+            saveStatus.className  = 'save-status visible';
+          } catch (e) {
+            saveLabel.textContent = '⚠ Could not save to history (check Firebase config)';
+            saveStatus.className  = 'save-status visible error';
+          }
+        }
+
+      } catch (err) {
+        progressWrap.classList.remove('visible');
+        showError(err.message || 'Unexpected error during conversion.');
       }
 
-    } catch (err) {
-      progressWrap.classList.remove('visible');
-      showError(err.message || 'Unexpected error during conversion.');
+      convertBtn.disabled = false;
+    });
+
+    // ── Download ──────────────────────────────────────────────────
+    downloadBtn.addEventListener('click', () => {
+      if (!downloadBlob) return;
+      const url = URL.createObjectURL(downloadBlob);
+      const a   = Object.assign(document.createElement('a'), { href: url, download: downloadName });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    });
+
+    (() => {
+      const btn = document.getElementById('pwa-install-btn');
+      let deferredPrompt = null;
+
+      // The beforeinstallprompt event fires when the browser decides
+      // the app is installable and hasn't been installed yet.
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();             // stop the automatic mini-infobar
+        deferredPrompt = e;
+        btn.classList.remove('hidden'); // now safe to show our button
+      });
+
+      btn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        btn.classList.add('hidden');    // hide regardless of accept/dismiss
+      });
+
+      // If the app gets installed another way (e.g. browser menu),
+      // hide the button so it doesn't linger.
+      window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        btn.classList.add('hidden');
+      });
+    })();
+
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .catch(err => console.warn('SW registration failed:', err));
+      });
     }
-
-    convertBtn.disabled = false;
-  });
-
-  // ── Download ──────────────────────────────────────────────────
-  downloadBtn.addEventListener('click', () => {
-    if (!downloadBlob) return;
-    const url = URL.createObjectURL(downloadBlob);
-    const a   = Object.assign(document.createElement('a'), { href: url, download: downloadName });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-  });
-</script>
+  </script>
 </body>
 </html>
